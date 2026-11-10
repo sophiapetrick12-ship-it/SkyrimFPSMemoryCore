@@ -12,7 +12,7 @@ Supports building on **Linux** (cross-compilation via `clang-cl` + [xwin](https:
 ## Requirements
 
 - [SKSE64](https://skse.silverlock.org/)
-- [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) for SE and AE, or [VR Address Library for SKSEVR](https://www.nexusmods.com/skyrimspecialedition/mods/58101) for VR
+- Address Library is not currently required by the implemented telemetry/menu code. It will be required only if a future validated runtime-specific hook needs it.
 
 ## Installation
 
@@ -30,20 +30,26 @@ Supports building on **Linux** (cross-compilation via `clang-cl` + [xwin](https:
 
 ## Compatibility
 
-- Compatible with Skyrim SE, AE, and VR.
-- No ESP/ESL required.
+- Primary validation target: Skyrim SE 1.5.97.
+- AE 1.6/1.7 compatibility is not yet verified.
+- Skyrim VR is not currently supported or validated.
+- No ESP/ESL is required.
 
 <!-- nexus:end -->
 
 ---
 
-## What the Starter Plugin Does
+## Current implementation status
 
-When loaded by Skyrim the plugin:
+When loaded by SKSE, the current development branch:
 
-1. **Writes a log** to `Data/SKSE/Plugins/SkyrimFPSMemoryCore.log` via spdlog.
-2. **Hooks `kDataLoaded`** (fires once all game data is loaded).
-3. **Prints to the in-game console** (`~` key): `[SkyrimFPSMemoryCore] Loaded successfully!`
+1. Writes `SkyrimFPSMemoryCore.log` through the SKSE logging interface.
+2. Reads `Data/SKSE/Plugins/SkyrimFPSMemoryCore.ini` after `kDataLoaded`.
+3. Optionally samples process and system memory counters once per second. This is read-only telemetry; it does not free RAM or claim to improve FPS.
+4. Optionally registers a page in SKSE Menu Framework when its documented API is available.
+5. Leaves frame-time/FPS monitoring disabled. The earlier guessed engine hook was removed; a verified render/present source is still being researched.
+
+The plugin currently makes no changes to graphics settings, textures, actors, or gameplay state. It is not ready for installation or performance claims.
 
 ---
 
