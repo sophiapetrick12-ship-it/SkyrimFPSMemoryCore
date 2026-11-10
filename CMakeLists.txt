@@ -84,6 +84,7 @@ else()
         "sophiapetrick12-ship-it"
         SOURCES
         src/Plugin.cpp
+        src/ProcessMemory.cpp
         "${CMAKE_CURRENT_BINARY_DIR}/src/version.rc"
         USE_ADDRESS_LIBRARY)
 
@@ -99,6 +100,7 @@ else()
     endif()
 
     target_precompile_headers(${PROJECT_NAME} PRIVATE src/PCH.h)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Psapi.lib)
 
     target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
                                                        "${CMAKE_CURRENT_BINARY_DIR}/src")
