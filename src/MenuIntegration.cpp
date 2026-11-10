@@ -57,7 +57,7 @@ namespace menu
 		}
 	}
 
-	bool RegisterMenuPage() noexcept
+	bool RegisterMenuPage()
 	{
 		g_framework = ::GetModuleHandleW(L"SKSEMenuFramework.dll");
 		if (!g_framework) {
