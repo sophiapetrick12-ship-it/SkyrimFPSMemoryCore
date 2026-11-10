@@ -70,13 +70,11 @@ namespace monitor
 			return false;
 		}
 
-		auto*** vtableField = reinterpret_cast<void***>(swapChain);
-		if (!vtableField || !*vtableField) {
+		auto** originalVtable = *reinterpret_cast<void***>(swapChain);
+		if (!originalVtable) {
 			logger::error("DXGI Present monitor skipped: swap-chain vtable is null");
 			return false;
 		}
-
-		auto** originalVtable = *vtableField;
 		auto& objectVptr = *reinterpret_cast<void**>(swapChain);
 
 		MEMORY_BASIC_INFORMATION memoryInfo{};
