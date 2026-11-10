@@ -13,8 +13,9 @@ namespace menu
 		using GetVersionFunction = float (*)();
 		using TextFunction = void (*)(const char*, const char*);
 
-		HMODULE       g_framework = nullptr;
-		TextFunction  g_text = nullptr;
+		HMODULE g_framework = nullptr;
+
+		TextFunction g_text = nullptr;
 
 		void __stdcall RenderMonitorPage()
 		{
