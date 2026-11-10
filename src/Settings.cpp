@@ -31,7 +31,7 @@ namespace config
 		g_settings.enableMenuFrameworkPage = ReadBoolean(path, L"EnableMenuFrameworkPage", true);
 
 		std::error_code error;
-		const bool exists = std::filesystem::exists(path, error);
+		const bool      exists = std::filesystem::exists(path, error);
 		if (error) {
 			logger::warn("Could not inspect the plugin configuration file; using defaults for missing values");
 		} else if (!exists) {
