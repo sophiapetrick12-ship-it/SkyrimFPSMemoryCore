@@ -9,7 +9,7 @@ namespace memory
 		std::uint64_t workingSetBytes{ 0 };
 		std::uint64_t peakWorkingSetBytes{ 0 };
 		std::uint64_t privateUsageBytes{ 0 };
-		std::uint64_t pagefileUsageBytes{ 0 };
+		std::uint64_t commitChargeBytes{ 0 };
 	};
 
 	struct SystemMemorySnapshot
