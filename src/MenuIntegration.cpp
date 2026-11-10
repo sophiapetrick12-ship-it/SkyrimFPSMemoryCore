@@ -34,7 +34,7 @@ namespace menu
 			} else {
 				text("Frame-time monitor disabled until its engine hook is verified.", nullptr);
 			}
-			text("This is Skyrim main-loop cadence, not GPU-present/display FPS.", nullptr);
+			text("No display FPS or frame-time data is currently collected.", nullptr);
 
 			memory::ProcessMemorySnapshot process{};
 			memory::SystemMemorySnapshot  system{};
