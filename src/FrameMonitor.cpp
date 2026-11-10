@@ -110,11 +110,15 @@ namespace monitor
 
 		const auto vtableAddress = reinterpret_cast<std::uintptr_t>(vtable);
 		constexpr auto slotOffset = kPresentVtableIndex * sizeof(void*);
-		if (vtableAddress > std::numeric_limits<std::uintptr_t>::max() - slotOffset) {
+		if (vtableAddress > std::numeric_limits<std::uintptr_t>::max() - slotOffset - sizeof(void*)) {
 			logger::error("DXGI Present monitor skipped: swap-chain vtable address overflow");
 			return false;
 		}
 		auto** presentSlot = reinterpret_cast<void**>(vtableAddress + slotOffset);
+		if (reinterpret_cast<std::uintptr_t>(presentSlot) % std::atomic_ref<void*>::required_alignment != 0) {
+			logger::error("DXGI Present monitor skipped: Present vtable slot is not correctly aligned");
+			return false;
+		}
 
 		MEMORY_BASIC_INFORMATION vtableInfo{};
 		if (::VirtualQuery(presentSlot, &vtableInfo, sizeof(vtableInfo)) != sizeof(vtableInfo) ||
@@ -131,7 +135,7 @@ namespace monitor
 		}
 
 		DWORD oldProtection{};
-		if (!::VirtualProtect(presentSlot, sizeof(void*), PAGE_EXECUTE_READWRITE, &oldProtection)) {
+		if (!::VirtualProtect(presentSlot, sizeof(void*), PAGE_READWRITE, &oldProtection)) {
 			logger::error("DXGI Present monitor skipped: could not make Present vtable slot writable");
 			return false;
 		}
