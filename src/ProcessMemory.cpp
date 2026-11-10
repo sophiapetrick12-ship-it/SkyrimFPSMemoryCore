@@ -1,5 +1,5 @@
-#include "PCH.h"
 #include "ProcessMemory.h"
+#include "PCH.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -61,9 +61,9 @@ namespace memory
 			{
 				for (;;) {
 					ProcessMemorySnapshot process{};
-					SystemMemorySnapshot system{};
-					const bool processOk = CaptureProcessMemory(process);
-					const bool systemOk = CaptureSystemMemory(system);
+					SystemMemorySnapshot  system{};
+					const bool            processOk = CaptureProcessMemory(process);
+					const bool            systemOk = CaptureSystemMemory(system);
 					if (processOk && systemOk) {
 						std::lock_guard snapshotLock(_snapshotMutex);
 						_process = process;
@@ -83,10 +83,10 @@ namespace memory
 			bool                    _stopping{ false };
 			std::thread             _thread;
 
-			std::mutex              _snapshotMutex;
-			ProcessMemorySnapshot   _process{};
-			SystemMemorySnapshot    _system{};
-			bool                    _hasSnapshot{ false };
+			std::mutex            _snapshotMutex;
+			ProcessMemorySnapshot _process{};
+			SystemMemorySnapshot  _system{};
+			bool                  _hasSnapshot{ false };
 		};
 
 		TelemetryWorker& Worker()

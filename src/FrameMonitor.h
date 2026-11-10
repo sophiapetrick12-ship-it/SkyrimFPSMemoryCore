@@ -6,12 +6,12 @@ namespace monitor
 {
 	struct FrameSnapshot
 	{
-		double frameTimeMilliseconds{ 0.0 };
-		double framesPerSecond{ 0.0 };
+		double        frameTimeMilliseconds{ 0.0 };
+		double        framesPerSecond{ 0.0 };
 		std::uint64_t frameCount{ 0 };
-		bool available{ false };
+		bool          available{ false };
 	};
 
-	[[nodiscard]] bool InstallMainLoopHook() noexcept;
+	[[nodiscard]] bool          InstallMainLoopHook() noexcept;
 	[[nodiscard]] FrameSnapshot GetFrameSnapshot() noexcept;
 }

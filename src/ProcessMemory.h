@@ -24,9 +24,9 @@ namespace memory
 	[[nodiscard]] bool CaptureProcessMemory(ProcessMemorySnapshot& a_snapshot) noexcept;
 	[[nodiscard]] bool CaptureSystemMemory(SystemMemorySnapshot& a_snapshot) noexcept;
 
-	void StartTelemetryWorker();
-	void StopTelemetryWorker() noexcept;
+	void               StartTelemetryWorker();
+	void               StopTelemetryWorker() noexcept;
 	[[nodiscard]] bool GetLatestTelemetry(
 		ProcessMemorySnapshot& a_process,
-		SystemMemorySnapshot& a_system) noexcept;
+		SystemMemorySnapshot&  a_system) noexcept;
 }

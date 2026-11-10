@@ -1,5 +1,5 @@
-#include "PCH.h"
 #include "FrameMonitor.h"
+#include "PCH.h"
 
 #include <array>
 #include <atomic>
@@ -14,11 +14,11 @@ namespace monitor
 		using UpdateFunction = void(RE::Main*);
 		REL::Relocation<UpdateFunction*> g_originalUpdate;
 
-		std::atomic<double> g_frameTimeMilliseconds{ 0.0 };
-		std::atomic<double> g_framesPerSecond{ 0.0 };
+		std::atomic<double>        g_frameTimeMilliseconds{ 0.0 };
+		std::atomic<double>        g_framesPerSecond{ 0.0 };
 		std::atomic<std::uint64_t> g_frameCount{ 0 };
-		std::atomic<bool> g_available{ false };
-		std::atomic<bool> g_installed{ false };
+		std::atomic<bool>          g_available{ false };
+		std::atomic<bool>          g_installed{ false };
 
 		void MainUpdateHook(RE::Main* a_main)
 		{

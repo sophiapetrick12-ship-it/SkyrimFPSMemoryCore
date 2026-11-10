@@ -1,6 +1,6 @@
-#include "PCH.h"
-#include "FrameMonitor.h"
 #include "MenuIntegration.h"
+#include "FrameMonitor.h"
+#include "PCH.h"
 #include "ProcessMemory.h"
 
 #include <format>
@@ -40,10 +40,10 @@ namespace menu
 			text("This is Skyrim main-loop cadence, not GPU-present/display FPS.", nullptr);
 
 			memory::ProcessMemorySnapshot process{};
-			memory::SystemMemorySnapshot system{};
+			memory::SystemMemorySnapshot  system{};
 			if (memory::GetLatestTelemetry(process, system)) {
 				constexpr double mib = 1024.0 * 1024.0;
-				const auto processLine = std::format(
+				const auto       processLine = std::format(
 					"Process RAM: working set {:.0f} MiB | private {:.0f} MiB",
 					static_cast<double>(process.workingSetBytes) / mib,
 					static_cast<double>(process.privateUsageBytes) / mib);

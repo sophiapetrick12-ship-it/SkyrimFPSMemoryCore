@@ -1,6 +1,6 @@
-#include "PCH.h"
 #include "FrameMonitor.h"
 #include "MenuIntegration.h"
+#include "PCH.h"
 #include "ProcessMemory.h"
 #include "Settings.h"
 

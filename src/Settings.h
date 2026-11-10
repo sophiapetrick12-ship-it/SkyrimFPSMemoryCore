@@ -9,6 +9,6 @@ namespace config
 		bool enableMenuFrameworkPage{ true };
 	};
 
-	[[nodiscard]] Settings LoadSettings();
+	[[nodiscard]] Settings        LoadSettings();
 	[[nodiscard]] const Settings& GetSettings() noexcept;
 }
