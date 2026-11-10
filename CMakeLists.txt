@@ -85,6 +85,9 @@ else()
         SOURCES
         src/Plugin.cpp
         src/ProcessMemory.cpp
+        src/FrameMonitor.cpp
+        src/MenuIntegration.cpp
+        src/Settings.cpp
         "${CMAKE_CURRENT_BINARY_DIR}/src/version.rc"
         USE_ADDRESS_LIBRARY)
 
