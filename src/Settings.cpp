@@ -7,7 +7,11 @@ namespace config
 {
 	namespace
 	{
-		Settings g_settings{};
+		Settings& MutableSettings() noexcept
+		{
+			static Settings settings{};
+			return settings;
+		}
 
 		std::filesystem::path GetSettingsPath()
 		{
@@ -23,12 +27,13 @@ namespace config
 
 	Settings LoadSettings()
 	{
-		g_settings = Settings{};
+		auto& settings = MutableSettings();
+		settings = Settings{};
 		const auto path = GetSettingsPath();
 
-		g_settings.enableFrameMonitor = ReadBoolean(path, L"EnableFrameMonitor", true);
-		g_settings.enableMemoryTelemetry = ReadBoolean(path, L"EnableMemoryTelemetry", true);
-		g_settings.enableMenuFrameworkPage = ReadBoolean(path, L"EnableMenuFrameworkPage", true);
+		settings.enableFrameMonitor = ReadBoolean(path, L"EnableFrameMonitor", true);
+		settings.enableMemoryTelemetry = ReadBoolean(path, L"EnableMemoryTelemetry", true);
+		settings.enableMenuFrameworkPage = ReadBoolean(path, L"EnableMenuFrameworkPage", true);
 
 		std::error_code error;
 		const bool      exists = std::filesystem::exists(path, error);
@@ -53,14 +58,14 @@ namespace config
 
 		logger::info(
 			"Settings: frame monitor={}, memory telemetry={}, menu page={}",
-			g_settings.enableFrameMonitor,
-			g_settings.enableMemoryTelemetry,
-			g_settings.enableMenuFrameworkPage);
-		return g_settings;
+			settings.enableFrameMonitor,
+			settings.enableMemoryTelemetry,
+			settings.enableMenuFrameworkPage);
+		return settings;
 	}
 
 	const Settings& GetSettings() noexcept
 	{
-		return g_settings;
+		return MutableSettings();
 	}
 }
