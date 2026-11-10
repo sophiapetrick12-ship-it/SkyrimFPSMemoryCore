@@ -61,7 +61,7 @@ namespace
 
 		if (settings.enableFrameMonitor) {
 			try {
-				if (!monitor::InstallMainLoopHook()) {
+				if (!monitor::InstallPresentHook()) {
 					logger::warn("Frame monitoring remains unavailable; no unverified hook was installed");
 				}
 			} catch (const std::exception& error) {
