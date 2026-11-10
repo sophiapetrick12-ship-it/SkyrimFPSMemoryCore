@@ -62,7 +62,7 @@ namespace
 		if (settings.enableFrameMonitor) {
 			try {
 				if (!monitor::InstallPresentHook()) {
-					logger::warn("Frame monitoring remains unavailable; no unverified hook was installed");
+					logger::warn("Frame monitoring remains unavailable; the DXGI Present hook could not be installed");
 				}
 			} catch (const std::exception& error) {
 				logger::error("Frame monitor initialization failed safely: {}", error.what());
