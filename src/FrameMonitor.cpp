@@ -3,7 +3,7 @@
 
 namespace monitor
 {
-	bool InstallMainLoopHook() noexcept
+	bool InstallMainLoopHook()
 	{
 		const auto runtime = REL::Module::get().version();
 		logger::warn(
