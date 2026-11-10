@@ -26,7 +26,7 @@ namespace config
 		g_settings = Settings{};
 		const auto path = GetSettingsPath();
 
-		g_settings.enableFrameMonitor = ReadBoolean(path, L"EnableFrameMonitor", false);
+		g_settings.enableFrameMonitor = ReadBoolean(path, L"EnableFrameMonitor", true);
 		g_settings.enableMemoryTelemetry = ReadBoolean(path, L"EnableMemoryTelemetry", true);
 		g_settings.enableMenuFrameworkPage = ReadBoolean(path, L"EnableMenuFrameworkPage", true);
 
@@ -40,7 +40,7 @@ namespace config
 				logger::error("Could not create the plugin configuration directory: {}", error.message());
 			} else {
 				const bool wroteDefaults =
-					::WritePrivateProfileStringW(L"Features", L"EnableFrameMonitor", L"0", path.c_str()) &&
+					::WritePrivateProfileStringW(L"Features", L"EnableFrameMonitor", L"1", path.c_str()) &&
 					::WritePrivateProfileStringW(L"Features", L"EnableMemoryTelemetry", L"1", path.c_str()) &&
 					::WritePrivateProfileStringW(L"Features", L"EnableMenuFrameworkPage", L"1", path.c_str());
 				if (wroteDefaults) {
