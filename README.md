@@ -1,6 +1,6 @@
 # SkyrimFPSMemoryCore
 
-A draft SKSE plugin targeting Skyrim SE 1.5.97 and, after validation, AE runtimes. The current branch provides read-only process/system memory telemetry and an optional SKSE Menu Framework page. Frame-time monitoring and measured performance optimizations are not implemented yet.
+A draft SKSE plugin targeting Skyrim SE 1.5.97 and, after validation, AE runtimes. The current branch provides read-only process/system memory telemetry, an optional SKSE Menu Framework page, and a DXGI Present-call cadence monitor. The monitor still needs in-game/overlay validation; no measured gameplay performance optimization is implemented yet.
 
 The project uses [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG), [CMake](https://cmake.org), and [vcpkg](https://vcpkg.io), with build configurations for **Windows** (MSVC) and **Linux cross-compilation** (`clang-cl` + [xwin](https://github.com/Jake-Shadle/xwin)).
 
@@ -36,9 +36,9 @@ When loaded by SKSE, the current development branch:
 2. Reads `Data/SKSE/Plugins/SkyrimFPSMemoryCore.ini` after `kDataLoaded`.
 3. Optionally samples process and system memory counters once per second. This is read-only telemetry; it does not free RAM or claim to improve FPS.
 4. Optionally registers a page in SKSE Menu Framework when its documented API is available.
-5. Leaves frame-time/FPS monitoring disabled. The earlier guessed engine hook was removed; a verified render/present source is still being researched.
+5. Installs a low-overhead DXGI Present-call cadence monitor on the primary swap chain after `kDataLoaded`. It records the interval between Present calls and forwards to the original function. This is not physical display scan-out FPS, and runtime/overlay compatibility validation is still pending.
 
-The plugin currently makes no changes to graphics settings, textures, actors, or gameplay state. It is not ready for installation or performance claims.
+The plugin does not change graphics settings, textures, actors, or gameplay state. The Present callback does not read game state. It is not ready for installation or performance claims until the Windows build and in-game validation pass.
 
 ---
 
