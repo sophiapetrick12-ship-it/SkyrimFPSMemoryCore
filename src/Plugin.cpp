@@ -37,10 +37,11 @@ void OnDataLoaded()
 	if (memory::CaptureProcessMemory(memorySnapshot)) {
 		constexpr double bytesPerMiB = 1024.0 * 1024.0;
 		logger::info(
-			"Process memory: working set {:.1f} MiB, peak {:.1f} MiB, private {:.1f} MiB",
+			"Process memory: working set {:.1f} MiB, peak {:.1f} MiB, private {:.1f} MiB, pagefile {:.1f} MiB",
 			static_cast<double>(memorySnapshot.workingSetBytes) / bytesPerMiB,
 			static_cast<double>(memorySnapshot.peakWorkingSetBytes) / bytesPerMiB,
-			static_cast<double>(memorySnapshot.privateUsageBytes) / bytesPerMiB);
+			static_cast<double>(memorySnapshot.privateUsageBytes) / bytesPerMiB,
+			static_cast<double>(memorySnapshot.pagefileUsageBytes) / bytesPerMiB);
 	} else {
 		logger::warn("Unable to query process memory counters");
 	}
