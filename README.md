@@ -11,7 +11,7 @@ The project uses [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG),
 ## Requirements
 
 - [SKSE64](https://skse.silverlock.org/)
-- Address Library is not currently required by the implemented telemetry/menu code. It will be required only if a future validated runtime-specific hook needs it.
+- [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) for Skyrim SE/AE. The DXGI monitor obtains the renderer singleton through CommonLib's runtime relocation.
 
 ## Installation
 
