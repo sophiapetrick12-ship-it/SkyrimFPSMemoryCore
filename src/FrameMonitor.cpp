@@ -3,11 +3,10 @@
 
 #include <dxgi.h>
 
-#include <algorithm>
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <limits>
 
 namespace monitor
 {
@@ -16,23 +15,38 @@ namespace monitor
 		using PresentFunction = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT);
 
 		constexpr std::size_t kPresentVtableIndex = 8;
-		constexpr std::size_t kSwapChainVtableSize = 18;
 
-		std::array<void*, kSwapChainVtableSize> g_shadowVtable{};
-		PresentFunction                        g_originalPresent = nullptr;
-		std::atomic<bool>                      g_installed{ false };
-		std::atomic<std::int64_t>               g_lastPresentNanoseconds{ 0 };
-		std::atomic<std::int64_t>               g_frameIntervalNanoseconds{ 0 };
-		std::atomic<std::uint64_t>              g_frameCount{ 0 };
+		PresentFunction             g_originalPresent = nullptr;
+		std::atomic<IDXGISwapChain*> g_hookedSwapChain{ nullptr };
+		std::atomic<bool>            g_installed{ false };
+		std::atomic<std::int64_t>    g_lastPresentNanoseconds{ 0 };
+		std::atomic<std::int64_t>    g_frameIntervalNanoseconds{ 0 };
+		std::atomic<std::uint64_t>   g_frameCount{ 0 };
 
 		static_assert(std::atomic_ref<void*>::is_always_lock_free);
+
+		bool IsReadableProtection(DWORD a_protection) noexcept
+		{
+			switch (a_protection & 0xFF) {
+			case PAGE_READONLY:
+			case PAGE_READWRITE:
+			case PAGE_WRITECOPY:
+			case PAGE_EXECUTE_READ:
+			case PAGE_EXECUTE_READWRITE:
+			case PAGE_EXECUTE_WRITECOPY:
+				return true;
+			default:
+				return false;
+			}
+		}
 
 		HRESULT STDMETHODCALLTYPE PresentHook(
 			IDXGISwapChain* a_swapChain,
 			UINT            a_syncInterval,
 			UINT            a_flags) noexcept
 		{
-			if ((a_flags & DXGI_PRESENT_TEST) == 0) {
+			if (a_swapChain == g_hookedSwapChain.load(std::memory_order_relaxed) &&
+				(a_flags & DXGI_PRESENT_TEST) == 0) {
 				const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
 					std::chrono::steady_clock::now().time_since_epoch()).count();
 				const auto previous = g_lastPresentNanoseconds.exchange(now, std::memory_order_relaxed);
@@ -80,51 +94,62 @@ namespace monitor
 			return false;
 		}
 
-		MEMORY_BASIC_INFORMATION memoryInfo{};
-		if (::VirtualQuery(swapChain, &memoryInfo, sizeof(memoryInfo)) != sizeof(memoryInfo) ||
-			memoryInfo.State != MEM_COMMIT) {
-			logger::error("DXGI Present monitor skipped: could not validate swap-chain object memory");
+		MEMORY_BASIC_INFORMATION objectInfo{};
+		if (::VirtualQuery(swapChain, &objectInfo, sizeof(objectInfo)) != sizeof(objectInfo) ||
+			objectInfo.State != MEM_COMMIT ||
+			!IsReadableProtection(objectInfo.Protect)) {
+			logger::error("DXGI Present monitor skipped: swap-chain object memory is not readable");
 			return false;
 		}
 
-		const auto protection = memoryInfo.Protect & 0xFF;
-		const bool writable = protection == PAGE_READWRITE ||
-		                      protection == PAGE_WRITECOPY ||
-		                      protection == PAGE_EXECUTE_READWRITE ||
-		                      protection == PAGE_EXECUTE_WRITECOPY;
-		if (!writable) {
-			logger::error("DXGI Present monitor skipped: swap-chain vptr memory is not writable");
-			return false;
-		}
-
-		auto** originalVtable = *reinterpret_cast<void***>(swapChain);
-		if (!originalVtable) {
+		auto** vtable = *reinterpret_cast<void***>(swapChain);
+		if (!vtable) {
 			logger::error("DXGI Present monitor skipped: swap-chain vtable is null");
 			return false;
 		}
-		auto& objectVptr = *reinterpret_cast<void**>(swapChain);
 
-		if (!originalVtable[kPresentVtableIndex]) {
-			logger::error("DXGI Present monitor skipped: original Present function is null");
+		const auto vtableAddress = reinterpret_cast<std::uintptr_t>(vtable);
+		constexpr auto slotOffset = kPresentVtableIndex * sizeof(void*);
+		if (vtableAddress > std::numeric_limits<std::uintptr_t>::max() - slotOffset) {
+			logger::error("DXGI Present monitor skipped: swap-chain vtable address overflow");
+			return false;
+		}
+		auto** presentSlot = reinterpret_cast<void**>(vtableAddress + slotOffset);
+
+		MEMORY_BASIC_INFORMATION vtableInfo{};
+		if (::VirtualQuery(presentSlot, &vtableInfo, sizeof(vtableInfo)) != sizeof(vtableInfo) ||
+			vtableInfo.State != MEM_COMMIT ||
+			!IsReadableProtection(vtableInfo.Protect)) {
+			logger::error("DXGI Present monitor skipped: Present vtable slot is not readable");
 			return false;
 		}
 
-		std::copy_n(originalVtable, g_shadowVtable.size(), g_shadowVtable.begin());
-		g_originalPresent = reinterpret_cast<PresentFunction>(originalVtable[kPresentVtableIndex]);
-		g_shadowVtable[kPresentVtableIndex] = reinterpret_cast<void*>(&PresentHook);
-
-		if (reinterpret_cast<std::uintptr_t>(&objectVptr) % std::atomic_ref<void*>::required_alignment != 0) {
-			g_originalPresent = nullptr;
-			logger::error("DXGI Present monitor skipped: swap-chain vptr is not correctly aligned");
+		auto& presentEntry = *presentSlot;
+		if (!presentEntry || presentEntry == reinterpret_cast<void*>(&PresentHook)) {
+			logger::error("DXGI Present monitor skipped: Present vtable entry is invalid or already hooked");
 			return false;
 		}
 
-		std::atomic_ref<void*> vptrReference(objectVptr);
-		vptrReference.store(g_shadowVtable.data(), std::memory_order_release);
+		DWORD oldProtection{};
+		if (!::VirtualProtect(presentSlot, sizeof(void*), PAGE_EXECUTE_READWRITE, &oldProtection)) {
+			logger::error("DXGI Present monitor skipped: could not make Present vtable slot writable");
+			return false;
+		}
+
+		g_originalPresent = reinterpret_cast<PresentFunction>(presentEntry);
+		g_hookedSwapChain.store(swapChain, std::memory_order_relaxed);
+
+		std::atomic_ref<void*> presentSlotReference(presentEntry);
+		presentSlotReference.store(reinterpret_cast<void*>(&PresentHook), std::memory_order_release);
+
+		DWORD ignoredProtection{};
+		if (!::VirtualProtect(presentSlot, sizeof(void*), oldProtection, &ignoredProtection)) {
+			logger::error("DXGI Present monitor installed, but original vtable page protection could not be restored");
+		}
+
 		g_installed.store(true, std::memory_order_release);
-
 		logger::info(
-			"DXGI Present monitor installed on the primary swap chain; measuring Present-call cadence without patching game code");
+			"DXGI Present monitor installed on the primary swap chain; measuring Present-call cadence and chaining the existing Present function");
 		return true;
 	}
 
