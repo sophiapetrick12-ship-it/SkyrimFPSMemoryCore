@@ -3,7 +3,7 @@
 
 #include <dxgi.h>
 #ifdef GetObject
-#undef GetObject
+#    undef GetObject
 #endif
 
 #include <atomic>
@@ -19,12 +19,12 @@ namespace monitor
 		constexpr std::size_t kPresentVtableIndex = 8;
 
 		// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
-		std::atomic<PresentFunction>   g_originalPresent{ nullptr };
-		std::atomic<IDXGISwapChain*>   g_hookedSwapChain{ nullptr };
-		std::atomic<bool>              g_installed{ false };
-		std::atomic<std::int64_t>      g_lastPresentNanoseconds{ 0 };
-		std::atomic<std::int64_t>      g_frameIntervalNanoseconds{ 0 };
-		std::atomic<std::uint64_t>     g_frameCount{ 0 };
+		std::atomic<PresentFunction> g_originalPresent{ nullptr };
+		std::atomic<IDXGISwapChain*> g_hookedSwapChain{ nullptr };
+		std::atomic<bool>            g_installed{ false };
+		std::atomic<std::int64_t>    g_lastPresentNanoseconds{ 0 };
+		std::atomic<std::int64_t>    g_frameIntervalNanoseconds{ 0 };
+		std::atomic<std::uint64_t>   g_frameCount{ 0 };
 		// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 		static_assert(std::atomic<PresentFunction>::is_always_lock_free);
@@ -126,7 +126,7 @@ namespace monitor
 			return false;
 		}
 
-		auto** presentSlot = vtable + kPresentVtableIndex;
+		auto**                   presentSlot = vtable + kPresentVtableIndex;
 		MEMORY_BASIC_INFORMATION vtableInfo{};
 		if (::VirtualQuery(static_cast<const void*>(presentSlot), &vtableInfo, sizeof(vtableInfo)) != sizeof(vtableInfo) ||
 			vtableInfo.State != MEM_COMMIT ||
