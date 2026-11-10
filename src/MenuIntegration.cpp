@@ -13,18 +13,15 @@ namespace menu
 		using GetVersionFunction = float (*)();
 		using TextFunction = void (*)(const char*, const char*);
 
-		HMODULE g_framework = nullptr;
+		HMODULE       g_framework = nullptr;
+		TextFunction  g_text = nullptr;
 
 		void __stdcall RenderMonitorPage()
 		{
-			if (!g_framework) {
+			if (!g_framework || !g_text) {
 				return;
 			}
-
-			const auto text = reinterpret_cast<TextFunction>(::GetProcAddress(g_framework, "igTextUnformatted"));
-			if (!text) {
-				return;
-			}
+			const auto text = g_text;
 
 			const auto frame = monitor::GetFrameSnapshot();
 			if (frame.available) {
@@ -72,7 +69,8 @@ namespace menu
 			::GetProcAddress(g_framework, "AddSectionItem"));
 		const auto getVersion = reinterpret_cast<GetVersionFunction>(
 			::GetProcAddress(g_framework, "GetMenuFrameworkVersion"));
-		if (!addSectionItem || !getVersion) {
+		g_text = reinterpret_cast<TextFunction>(::GetProcAddress(g_framework, "igTextUnformatted"));
+		if (!addSectionItem || !getVersion || !g_text) {
 			logger::warn("SKSE Menu Framework is missing required API exports; monitor page skipped");
 			return false;
 		}
