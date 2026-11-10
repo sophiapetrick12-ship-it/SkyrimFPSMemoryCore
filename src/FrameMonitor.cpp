@@ -3,7 +3,7 @@
 
 #include <dxgi.h>
 #ifdef GetObject
-#undef GetObject
+#    undef GetObject
 #endif
 
 #include <atomic>
