@@ -35,7 +35,7 @@ namespace menu
 				text(frameLine.c_str(), nullptr);
 				text(countLine.c_str(), nullptr);
 			} else {
-				text("Main-loop timing: waiting for samples", nullptr);
+				text("Frame-time monitor disabled until its engine hook is verified.", nullptr);
 			}
 			text("This is Skyrim main-loop cadence, not GPU-present/display FPS.", nullptr);
 
