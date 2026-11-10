@@ -57,6 +57,16 @@ namespace monitor
 			return true;
 		}
 
+		const auto runtime = REL::Module::get().version();
+		const bool supportedSE = REL::Module::IsSE() && runtime == REL::Version{ 1, 5, 97, 0 };
+		const bool supportedAE = REL::Module::IsAE();
+		if (!supportedSE && !supportedAE) {
+			logger::warn(
+				"DXGI Present monitor skipped on unsupported runtime {}.{}.{}.{}",
+				runtime[0], runtime[1], runtime[2], runtime[3]);
+			return false;
+		}
+
 		auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
 		if (!renderer) {
 			logger::warn("DXGI Present monitor skipped: BSGraphics::Renderer is not available yet");
