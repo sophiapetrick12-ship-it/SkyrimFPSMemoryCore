@@ -26,14 +26,14 @@ namespace config
 		g_settings = Settings{};
 		const auto path = GetSettingsPath();
 
-		g_settings.enableFrameMonitor = ReadBoolean(path, L"EnableFrameMonitor", true);
+		g_settings.enableFrameMonitor = ReadBoolean(path, L"EnableFrameMonitor", false);
 		g_settings.enableMemoryTelemetry = ReadBoolean(path, L"EnableMemoryTelemetry", true);
 		g_settings.enableMenuFrameworkPage = ReadBoolean(path, L"EnableMenuFrameworkPage", true);
 
 		if (!std::filesystem::exists(path)) {
 			std::error_code error;
 			std::filesystem::create_directories(path.parent_path(), error);
-			::WritePrivateProfileStringW(L"Features", L"EnableFrameMonitor", L"1", path.c_str());
+			::WritePrivateProfileStringW(L"Features", L"EnableFrameMonitor", L"0", path.c_str());
 			::WritePrivateProfileStringW(L"Features", L"EnableMemoryTelemetry", L"1", path.c_str());
 			::WritePrivateProfileStringW(L"Features", L"EnableMenuFrameworkPage", L"1", path.c_str());
 			logger::info("Created default configuration at {}", path.string());
