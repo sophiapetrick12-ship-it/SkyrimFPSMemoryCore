@@ -16,8 +16,8 @@ namespace memory
 	{
 		std::uint64_t totalPhysicalBytes{ 0 };
 		std::uint64_t availablePhysicalBytes{ 0 };
-		std::uint64_t totalPageFileBytes{ 0 };
-		std::uint64_t availablePageFileBytes{ 0 };
+		std::uint64_t commitLimitBytes{ 0 };
+		std::uint64_t availableCommitBytes{ 0 };
 		std::uint32_t memoryLoadPercent{ 0 };
 	};
 
