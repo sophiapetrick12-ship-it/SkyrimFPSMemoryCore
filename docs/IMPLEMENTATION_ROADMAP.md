@@ -12,7 +12,7 @@
 ## Implemented modules
 
 - **Core:** SKSE lifecycle, runtime detection, logging, and initialization.
-- **Memory:** read-only process working set, peak working set, private usage, process commit charge, system physical memory, pagefile availability, and memory-load telemetry. A one-second worker samples memory outside any game hook. This is telemetry only; it does not free RAM or claim to improve performance.
+- **Memory:** read-only process working set, peak working set, private usage, process commit charge, system physical memory, system commit-limit/available-commit counters, and memory-load telemetry. A one-second worker samples memory outside any game hook. This is telemetry only; it does not free RAM or claim to improve performance.
 - **Monitor:** currently a safe disabled stub. The previously proposed `Main::Update` call-site IDs/offsets were not verified and were removed. Upstream CommonLibSSE-NG exposes `RE::Main::RenderWorld(bool)` with relocation IDs 100424 (SE) and 107142 (AE); this is only a candidate render callback, not proof of one call per presented frame. Its call frequency and entry/call-site instructions still need executable-level validation, so it is not hooked. The feature defaults to off and reports why it is unavailable. No FPS values are fabricated.
 - **UI:** optional SKSE Menu Framework page registered through the documented AddSectionItem callback API and ImGui text export. It remains optional if the framework is absent. Runtime testing is still required.
 - **Config:** INI at Data/SKSE/Plugins/SkyrimFPSMemoryCore.ini. Memory telemetry and the optional menu page default on; the unverified frame monitor defaults off.
