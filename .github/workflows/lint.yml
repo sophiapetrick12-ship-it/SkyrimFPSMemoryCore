@@ -11,13 +11,6 @@ on:
       - 'dprint.json'
       - 'lefthook.yml'
       - '.github/workflows/lint.yml'
-  push:
-    branches: [feature/frame-monitor-validation]
-    paths:
-      - 'src/**'
-      - 'README.md'
-      - 'docs/**/*.md'
-      - '.github/workflows/lint.yml'
   workflow_dispatch:
 
 permissions: {}
