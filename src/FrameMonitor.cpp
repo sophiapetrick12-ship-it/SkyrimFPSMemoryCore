@@ -47,8 +47,8 @@ namespace monitor
 		{
 			if (a_swapChain == g_hookedSwapChain.load(std::memory_order_relaxed) &&
 				(a_flags & DXGI_PRESENT_TEST) == 0) {
-				const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
-					std::chrono::steady_clock::now().time_since_epoch()).count();
+				const auto nowTime = std::chrono::steady_clock::now().time_since_epoch();
+				const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(nowTime).count();
 				const auto previous = g_lastPresentNanoseconds.exchange(now, std::memory_order_relaxed);
 
 				if (previous > 0 && now > previous) {
