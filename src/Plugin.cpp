@@ -76,8 +76,6 @@ namespace
 			}
 		}
 
-		TryInstallFrameMonitor();
-
 		if (settings.enableMenuFrameworkPage) {
 			try {
 				menu::RegisterMenuPage();
@@ -87,6 +85,8 @@ namespace
 				logger::error("Menu page registration failed");
 			}
 		}
+
+		TryInstallFrameMonitor();
 	}
 
 	void OnSKSEMessage(SKSE::MessagingInterface::Message* a_message)
