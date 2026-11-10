@@ -4,6 +4,8 @@
 #include "ProcessMemory.h"
 #include "Settings.h"
 
+#include <exception>
+
 namespace
 {
 	void SetupLog()
