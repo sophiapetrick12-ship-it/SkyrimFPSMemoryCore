@@ -1,9 +1,8 @@
 # SkyrimFPSMemoryCore
 
-A starter template for Skyrim Special Edition / Anniversary Edition SKSE plugins using
-[CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG), [CMake](https://cmake.org), and [vcpkg](https://vcpkg.io).
+A draft SKSE plugin targeting Skyrim SE 1.5.97 and, after validation, AE runtimes. The current branch provides read-only process/system memory telemetry and an optional SKSE Menu Framework page. Frame-time monitoring and measured performance optimizations are not implemented yet.
 
-Supports building on **Linux** (cross-compilation via `clang-cl` + [xwin](https://github.com/Jake-Shadle/xwin)) and **Windows** (MSVC).
+The project uses [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG), [CMake](https://cmake.org), and [vcpkg](https://vcpkg.io), with build configurations for **Windows** (MSVC) and **Linux cross-compilation** (`clang-cl` + [xwin](https://github.com/Jake-Shadle/xwin)).
 
 ---
 
