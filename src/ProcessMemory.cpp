@@ -1,7 +1,7 @@
-#include <psapi.h>
-
 #include "PCH.h"
 #include "ProcessMemory.h"
+
+#include <psapi.h>
 
 namespace memory
 {
@@ -18,6 +18,23 @@ namespace memory
 		a_snapshot.peakWorkingSetBytes = counters.PeakWorkingSetSize;
 		a_snapshot.privateUsageBytes = counters.PrivateUsage;
 		a_snapshot.pagefileUsageBytes = counters.PagefileUsage;
+		return true;
+	}
+
+	bool CaptureSystemMemory(SystemMemorySnapshot& a_snapshot) noexcept
+	{
+		MEMORYSTATUSEX status{};
+		status.dwLength = sizeof(status);
+
+		if (!::GlobalMemoryStatusEx(&status)) {
+			return false;
+		}
+
+		a_snapshot.totalPhysicalBytes = status.ullTotalPhys;
+		a_snapshot.availablePhysicalBytes = status.ullAvailPhys;
+		a_snapshot.totalPageFileBytes = status.ullTotalPageFile;
+		a_snapshot.availablePageFileBytes = status.ullAvailPageFile;
+		a_snapshot.memoryLoadPercent = status.dwMemoryLoad;
 		return true;
 	}
 }
