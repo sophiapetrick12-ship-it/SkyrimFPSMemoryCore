@@ -36,6 +36,23 @@ namespace
 		spdlog::flush_on(spdlog::level::info);
 	}
 
+	void TryInstallFrameMonitor()
+	{
+		if (!config::GetSettings().enableFrameMonitor) {
+			return;
+		}
+
+		try {
+			if (!monitor::InstallPresentHook()) {
+				logger::warn("Frame monitoring remains unavailable; the DXGI Present hook could not be installed");
+			}
+		} catch (const std::exception& error) {
+			logger::error("Frame monitor initialization failed safely: {}", error.what());
+		} catch (...) {
+			logger::error("Frame monitor initialization failed safely");
+		}
+	}
+
 	void OnDataLoaded()
 	{
 		logger::info("OnDataLoaded: initializing optional modules");
@@ -59,17 +76,7 @@ namespace
 			}
 		}
 
-		if (settings.enableFrameMonitor) {
-			try {
-				if (!monitor::InstallPresentHook()) {
-					logger::warn("Frame monitoring remains unavailable; the DXGI Present hook could not be installed");
-				}
-			} catch (const std::exception& error) {
-				logger::error("Frame monitor initialization failed safely: {}", error.what());
-			} catch (...) {
-				logger::error("Frame monitor initialization failed safely");
-			}
-		}
+		TryInstallFrameMonitor();
 
 		if (settings.enableMenuFrameworkPage) {
 			try {
@@ -90,6 +97,10 @@ namespace
 
 		if (a_message->type == SKSE::MessagingInterface::kDataLoaded) {
 			OnDataLoaded();
+		} else if (
+			a_message->type == SKSE::MessagingInterface::kNewGame ||
+			a_message->type == SKSE::MessagingInterface::kPostLoadGame) {
+			TryInstallFrameMonitor();
 		}
 	}
 }
