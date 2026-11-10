@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <exception>
 #include <mutex>
 #include <psapi.h>
 #include <thread>
@@ -14,6 +15,12 @@ namespace memory
 		class TelemetryWorker
 		{
 		public:
+			TelemetryWorker() = default;
+			TelemetryWorker(const TelemetryWorker&) = delete;
+			TelemetryWorker& operator=(const TelemetryWorker&) = delete;
+			TelemetryWorker(TelemetryWorker&&) = delete;
+			TelemetryWorker& operator=(TelemetryWorker&&) = delete;
+
 			~TelemetryWorker()
 			{
 				Stop();
@@ -21,7 +28,7 @@ namespace memory
 
 			void Start()
 			{
-				std::lock_guard lock(_mutex);
+				std::scoped_lock lock(_mutex);
 				if (_thread.joinable()) {
 					return;
 				}
@@ -32,22 +39,24 @@ namespace memory
 			void Stop() noexcept
 			{
 				{
-					std::lock_guard lock(_mutex);
+					std::scoped_lock lock(_mutex);
 					_stopping = true;
 				}
 				_condition.notify_all();
 				if (_thread.joinable()) {
 					try {
 						_thread.join();
+					} catch (const std::exception& error) {
+						logger::error("Memory telemetry worker join failed: {}", error.what());
 					} catch (...) {
-						// Do not allow shutdown-time telemetry cleanup to escape.
+						logger::error("Memory telemetry worker join failed with an unknown error");
 					}
 				}
 			}
 
 			bool Read(ProcessMemorySnapshot& a_process, SystemMemorySnapshot& a_system) noexcept
 			{
-				std::lock_guard lock(_snapshotMutex);
+				std::scoped_lock lock(_snapshotMutex);
 				if (!_hasSnapshot) {
 					return false;
 				}
@@ -65,7 +74,7 @@ namespace memory
 					const bool            processOk = CaptureProcessMemory(process);
 					const bool            systemOk = CaptureSystemMemory(system);
 					if (processOk && systemOk) {
-						std::lock_guard snapshotLock(_snapshotMutex);
+						std::scoped_lock snapshotLock(_snapshotMutex);
 						_process = process;
 						_system = system;
 						_hasSnapshot = true;
