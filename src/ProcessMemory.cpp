@@ -108,7 +108,7 @@ namespace memory
 		a_snapshot.workingSetBytes = counters.WorkingSetSize;
 		a_snapshot.peakWorkingSetBytes = counters.PeakWorkingSetSize;
 		a_snapshot.privateUsageBytes = counters.PrivateUsage;
-		a_snapshot.pagefileUsageBytes = counters.PagefileUsage;
+		a_snapshot.commitChargeBytes = counters.PagefileUsage;
 		return true;
 	}
 
