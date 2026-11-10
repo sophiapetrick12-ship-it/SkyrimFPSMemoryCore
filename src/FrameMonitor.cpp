@@ -94,6 +94,7 @@ namespace monitor
 			return false;
 		}
 
+		logger::info("Validated main-loop call site 0x{:X} -> 0x{:X}", site, destination);
 		SKSE::AllocTrampoline(14);
 		g_originalUpdate = SKSE::GetTrampoline().write_call<5>(site, MainUpdateHook);
 		g_installed.store(true, std::memory_order_release);
