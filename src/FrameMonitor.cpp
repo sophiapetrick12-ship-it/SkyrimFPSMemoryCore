@@ -48,19 +48,26 @@ namespace monitor
 		}
 
 		const auto runtime = REL::Module::get().version();
-		if (runtime != REL::Version{ 1, 5, 97, 0 }) {
+		const bool   supportedSE = REL::Module::IsSE() && runtime == REL::Version{ 1, 5, 97, 0 };
+		const bool   supportedAE = REL::Module::IsAE();
+		if (!supportedSE && !supportedAE) {
 			logger::warn(
-				"Main-loop timing disabled for runtime {}.{}.{}.{}; only Skyrim SE 1.5.97 is validated",
+				"Main-loop timing disabled for unsupported runtime {}.{}.{}.{}",
 				runtime[0], runtime[1], runtime[2], runtime[3]);
 			return false;
 		}
 
-		// Address Library call-site from the reviewed performance-monitor reference.
-		// Validate the instruction and its destination before modifying executable code.
-		REL::Relocation<std::uintptr_t> callSite{
-			REL::VariantID(35551, 36544, 0x05B6D70),
-			REL::VariantOffset(0x11F, 0x160, 0x11F)
-		};
+		// Resolve the call site through Address Library for this exact runtime.
+		// Missing IDs/offsets fail closed before any executable memory is changed.
+		const REL::VariantID     callSiteID{ 35551, 36544, 0 };
+		const REL::VariantOffset callSiteOffset{ 0x11F, 0x160, 0 };
+		if (callSiteID.offset() == 0 || callSiteOffset.offset() == 0) {
+			logger::warn(
+				"No validated main-loop relocation for runtime {}.{}.{}.{}; timing disabled",
+				runtime[0], runtime[1], runtime[2], runtime[3]);
+			return false;
+		}
+		REL::Relocation<std::uintptr_t> callSite{ callSiteID, callSiteOffset };
 
 		const auto site = callSite.address();
 		const auto text = REL::Module::get().segment(REL::Segment::textx);
@@ -90,7 +97,9 @@ namespace monitor
 		SKSE::AllocTrampoline(14);
 		g_originalUpdate = SKSE::GetTrampoline().write_call<5>(site, MainUpdateHook);
 		g_installed.store(true, std::memory_order_release);
-		logger::info("Main-loop timing hook installed for Skyrim SE 1.5.97");
+		logger::info(
+			"Main-loop timing hook installed for runtime {}.{}.{}.{} after call-site validation",
+			runtime[0], runtime[1], runtime[2], runtime[3]);
 		return true;
 	}
 
