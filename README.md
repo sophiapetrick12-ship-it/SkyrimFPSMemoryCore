@@ -16,17 +16,7 @@ Supports building on **Linux** (cross-compilation via `clang-cl` + [xwin](https:
 
 ## Installation
 
-**Mod manager (recommended):**
-
-1. Install the requirements above.
-2. Install SkyrimFPSMemoryCore via your mod manager.
-3. Launch Skyrim via SKSE.
-
-**Manual:**
-
-1. Install the requirements above.
-2. Copy `SkyrimFPSMemoryCore.dll` to `Data\SKSE\Plugins\`.
-3. Launch Skyrim via SKSE.
+**Development build only — not a release.** Do not install this branch into your live Skyrim profile yet. The Windows build and in-game runtime validation are still pending. When a tested release is available, installation instructions will be published here.
 
 ## Compatibility
 
