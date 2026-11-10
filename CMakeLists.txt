@@ -52,7 +52,7 @@ else()
         ON
         CACHE BOOL "" FORCE)
     set(ENABLE_SKYRIM_VR
-        ON
+        OFF
         CACHE BOOL "" FORCE)
     set(BUILD_TESTS
         OFF
