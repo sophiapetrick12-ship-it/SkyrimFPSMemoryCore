@@ -32,18 +32,31 @@ void SetupLog()
 void OnDataLoaded()
 {
 	logger::info("OnDataLoaded hook fired");
+	constexpr double bytesPerMiB = 1024.0 * 1024.0;
 
-	memory::ProcessMemorySnapshot memorySnapshot{};
-	if (memory::CaptureProcessMemory(memorySnapshot)) {
-		constexpr double bytesPerMiB = 1024.0 * 1024.0;
+	memory::ProcessMemorySnapshot processMemory{};
+	if (memory::CaptureProcessMemory(processMemory)) {
 		logger::info(
 			"Process memory: working set {:.1f} MiB, peak {:.1f} MiB, private {:.1f} MiB, pagefile {:.1f} MiB",
-			static_cast<double>(memorySnapshot.workingSetBytes) / bytesPerMiB,
-			static_cast<double>(memorySnapshot.peakWorkingSetBytes) / bytesPerMiB,
-			static_cast<double>(memorySnapshot.privateUsageBytes) / bytesPerMiB,
-			static_cast<double>(memorySnapshot.pagefileUsageBytes) / bytesPerMiB);
+			static_cast<double>(processMemory.workingSetBytes) / bytesPerMiB,
+			static_cast<double>(processMemory.peakWorkingSetBytes) / bytesPerMiB,
+			static_cast<double>(processMemory.privateUsageBytes) / bytesPerMiB,
+			static_cast<double>(processMemory.pagefileUsageBytes) / bytesPerMiB);
 	} else {
 		logger::warn("Unable to query process memory counters");
+	}
+
+	memory::SystemMemorySnapshot systemMemory{};
+	if (memory::CaptureSystemMemory(systemMemory)) {
+		logger::info(
+			"System memory: load {}%, physical available {:.1f}/{:.1f} MiB, pagefile available {:.1f}/{:.1f} MiB",
+			systemMemory.memoryLoadPercent,
+			static_cast<double>(systemMemory.availablePhysicalBytes) / bytesPerMiB,
+			static_cast<double>(systemMemory.totalPhysicalBytes) / bytesPerMiB,
+			static_cast<double>(systemMemory.availablePageFileBytes) / bytesPerMiB,
+			static_cast<double>(systemMemory.totalPageFileBytes) / bytesPerMiB);
+	} else {
+		logger::warn("Unable to query system memory counters");
 	}
 
 	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
