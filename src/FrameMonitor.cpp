@@ -2,11 +2,13 @@
 #include "PCH.h"
 
 #include <dxgi.h>
+#ifdef GetObject
+#undef GetObject
+#endif
 
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <limits>
 
 namespace monitor
 {
@@ -16,13 +18,16 @@ namespace monitor
 
 		constexpr std::size_t kPresentVtableIndex = 8;
 
-		PresentFunction              g_originalPresent = nullptr;
-		std::atomic<IDXGISwapChain*> g_hookedSwapChain{ nullptr };
-		std::atomic<bool>            g_installed{ false };
-		std::atomic<std::int64_t>    g_lastPresentNanoseconds{ 0 };
-		std::atomic<std::int64_t>    g_frameIntervalNanoseconds{ 0 };
-		std::atomic<std::uint64_t>   g_frameCount{ 0 };
+		// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+		std::atomic<PresentFunction>   g_originalPresent{ nullptr };
+		std::atomic<IDXGISwapChain*>   g_hookedSwapChain{ nullptr };
+		std::atomic<bool>              g_installed{ false };
+		std::atomic<std::int64_t>      g_lastPresentNanoseconds{ 0 };
+		std::atomic<std::int64_t>      g_frameIntervalNanoseconds{ 0 };
+		std::atomic<std::uint64_t>     g_frameCount{ 0 };
+		// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
+		static_assert(std::atomic<PresentFunction>::is_always_lock_free);
 		static_assert(std::atomic_ref<void*>::is_always_lock_free);
 
 		bool IsReadableProtection(DWORD a_protection) noexcept
@@ -40,12 +45,25 @@ namespace monitor
 			}
 		}
 
+		bool IsExecutableProtection(DWORD a_protection) noexcept
+		{
+			switch (a_protection & 0xFF) {
+			case PAGE_EXECUTE:
+			case PAGE_EXECUTE_READ:
+			case PAGE_EXECUTE_READWRITE:
+			case PAGE_EXECUTE_WRITECOPY:
+				return true;
+			default:
+				return false;
+			}
+		}
+
 		HRESULT STDMETHODCALLTYPE PresentHook(
 			IDXGISwapChain* a_swapChain,
 			UINT            a_syncInterval,
 			UINT            a_flags) noexcept
 		{
-			if (a_swapChain == g_hookedSwapChain.load(std::memory_order_relaxed) &&
+			if (a_swapChain == g_hookedSwapChain.load(std::memory_order_acquire) &&
 				(a_flags & DXGI_PRESENT_TEST) == 0) {
 				const auto nowTime = std::chrono::steady_clock::now().time_since_epoch();
 				const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(nowTime).count();
@@ -60,7 +78,7 @@ namespace monitor
 				}
 			}
 
-			const auto original = g_originalPresent;
+			const auto original = g_originalPresent.load(std::memory_order_acquire);
 			return original ? original(a_swapChain, a_syncInterval, a_flags) : E_FAIL;
 		}
 	}
@@ -95,7 +113,7 @@ namespace monitor
 		}
 
 		MEMORY_BASIC_INFORMATION objectInfo{};
-		if (::VirtualQuery(swapChain, &objectInfo, sizeof(objectInfo)) != sizeof(objectInfo) ||
+		if (::VirtualQuery(static_cast<const void*>(swapChain), &objectInfo, sizeof(objectInfo)) != sizeof(objectInfo) ||
 			objectInfo.State != MEM_COMMIT ||
 			!IsReadableProtection(objectInfo.Protect)) {
 			logger::error("DXGI Present monitor skipped: swap-chain object memory is not readable");
@@ -108,20 +126,9 @@ namespace monitor
 			return false;
 		}
 
-		const auto     vtableAddress = reinterpret_cast<std::uintptr_t>(vtable);
-		constexpr auto slotOffset = kPresentVtableIndex * sizeof(void*);
-		if (vtableAddress > std::numeric_limits<std::uintptr_t>::max() - slotOffset - sizeof(void*)) {
-			logger::error("DXGI Present monitor skipped: swap-chain vtable address overflow");
-			return false;
-		}
-		auto** presentSlot = reinterpret_cast<void**>(vtableAddress + slotOffset);
-		if (reinterpret_cast<std::uintptr_t>(presentSlot) % std::atomic_ref<void*>::required_alignment != 0) {
-			logger::error("DXGI Present monitor skipped: Present vtable slot is not correctly aligned");
-			return false;
-		}
-
+		auto** presentSlot = vtable + kPresentVtableIndex;
 		MEMORY_BASIC_INFORMATION vtableInfo{};
-		if (::VirtualQuery(presentSlot, &vtableInfo, sizeof(vtableInfo)) != sizeof(vtableInfo) ||
+		if (::VirtualQuery(static_cast<const void*>(presentSlot), &vtableInfo, sizeof(vtableInfo)) != sizeof(vtableInfo) ||
 			vtableInfo.State != MEM_COMMIT ||
 			!IsReadableProtection(vtableInfo.Protect)) {
 			logger::error("DXGI Present monitor skipped: Present vtable slot is not readable");
@@ -134,20 +141,28 @@ namespace monitor
 			return false;
 		}
 
+		MEMORY_BASIC_INFORMATION functionInfo{};
+		if (::VirtualQuery(static_cast<const void*>(presentEntry), &functionInfo, sizeof(functionInfo)) != sizeof(functionInfo) ||
+			functionInfo.State != MEM_COMMIT ||
+			!IsExecutableProtection(functionInfo.Protect)) {
+			logger::error("DXGI Present monitor skipped: original Present target is not executable");
+			return false;
+		}
+
 		DWORD oldProtection{};
-		if (!::VirtualProtect(presentSlot, sizeof(void*), PAGE_READWRITE, &oldProtection)) {
+		if (!::VirtualProtect(static_cast<void*>(presentSlot), sizeof(void*), PAGE_READWRITE, &oldProtection)) {
 			logger::error("DXGI Present monitor skipped: could not make Present vtable slot writable");
 			return false;
 		}
 
-		g_originalPresent = reinterpret_cast<PresentFunction>(presentEntry);
-		g_hookedSwapChain.store(swapChain, std::memory_order_relaxed);
+		g_originalPresent.store(reinterpret_cast<PresentFunction>(presentEntry), std::memory_order_release);
+		g_hookedSwapChain.store(swapChain, std::memory_order_release);
 
 		std::atomic_ref<void*> presentSlotReference(presentEntry);
 		presentSlotReference.store(reinterpret_cast<void*>(&PresentHook), std::memory_order_release);
 
 		DWORD ignoredProtection{};
-		if (!::VirtualProtect(presentSlot, sizeof(void*), oldProtection, &ignoredProtection)) {
+		if (!::VirtualProtect(static_cast<void*>(presentSlot), sizeof(void*), oldProtection, &ignoredProtection)) {
 			logger::error("DXGI Present monitor installed, but original vtable page protection could not be restored");
 		}
 
@@ -167,10 +182,10 @@ namespace monitor
 
 		const auto intervalNanoseconds = static_cast<double>(interval);
 		return {
-			intervalNanoseconds / 1'000'000.0,
-			1'000'000'000.0 / intervalNanoseconds,
-			count,
-			true
+			.frameTimeMilliseconds = intervalNanoseconds / 1'000'000.0,
+			.framesPerSecond = 1'000'000'000.0 / intervalNanoseconds,
+			.frameCount = count,
+			.available = true
 		};
 	}
 }
