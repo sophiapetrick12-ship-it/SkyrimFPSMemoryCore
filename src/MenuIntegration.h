@@ -2,5 +2,5 @@
 
 namespace menu
 {
-	[[nodiscard]] bool RegisterMenuPage() noexcept;
+	[[nodiscard]] bool RegisterMenuPage();
 }
