@@ -16,7 +16,7 @@ namespace monitor
 
 		constexpr std::size_t kPresentVtableIndex = 8;
 
-		PresentFunction             g_originalPresent = nullptr;
+		PresentFunction              g_originalPresent = nullptr;
 		std::atomic<IDXGISwapChain*> g_hookedSwapChain{ nullptr };
 		std::atomic<bool>            g_installed{ false };
 		std::atomic<std::int64_t>    g_lastPresentNanoseconds{ 0 };
@@ -108,7 +108,7 @@ namespace monitor
 			return false;
 		}
 
-		const auto vtableAddress = reinterpret_cast<std::uintptr_t>(vtable);
+		const auto     vtableAddress = reinterpret_cast<std::uintptr_t>(vtable);
 		constexpr auto slotOffset = kPresentVtableIndex * sizeof(void*);
 		if (vtableAddress > std::numeric_limits<std::uintptr_t>::max() - slotOffset - sizeof(void*)) {
 			logger::error("DXGI Present monitor skipped: swap-chain vtable address overflow");
