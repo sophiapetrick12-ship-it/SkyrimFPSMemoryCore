@@ -123,8 +123,8 @@ namespace memory
 
 		a_snapshot.totalPhysicalBytes = status.ullTotalPhys;
 		a_snapshot.availablePhysicalBytes = status.ullAvailPhys;
-		a_snapshot.totalPageFileBytes = status.ullTotalPageFile;
-		a_snapshot.availablePageFileBytes = status.ullAvailPageFile;
+		a_snapshot.commitLimitBytes = status.ullTotalPageFile;
+		a_snapshot.availableCommitBytes = status.ullAvailPageFile;
 		a_snapshot.memoryLoadPercent = status.dwMemoryLoad;
 		return true;
 	}
