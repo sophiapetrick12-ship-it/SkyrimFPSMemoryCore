@@ -3,6 +3,7 @@
 #include "PCH.h"
 #include "ProcessMemory.h"
 
+#include <atomic>
 #include <format>
 
 namespace menu
@@ -13,16 +14,23 @@ namespace menu
 		using GetVersionFunction = float (*)();
 		using TextFunction = void (*)(const char*, const char*);
 
-		HMODULE g_framework = nullptr;
+		struct MenuState
+		{
+			std::atomic<TextFunction> text{ nullptr };
+		};
 
-		TextFunction g_text = nullptr;
+		MenuState& GetState() noexcept
+		{
+			static MenuState state;
+			return state;
+		}
 
 		void __stdcall RenderMonitorPage()
 		{
-			if (!g_framework || !g_text) {
+			const auto text = GetState().text.load(std::memory_order_acquire);
+			if (!text) {
 				return;
 			}
-			const auto text = g_text;
 
 			const auto frame = monitor::GetFrameSnapshot();
 			if (frame.available) {
@@ -66,18 +74,19 @@ namespace menu
 
 	bool RegisterMenuPage()
 	{
-		g_framework = ::GetModuleHandleW(L"SKSEMenuFramework.dll");
-		if (!g_framework) {
+		const auto framework = ::GetModuleHandleW(L"SKSEMenuFramework");
+		if (!framework) {
 			logger::info("SKSE Menu Framework not loaded; optional monitor page skipped");
 			return false;
 		}
 
 		const auto addSectionItem = reinterpret_cast<AddSectionItemFunction>(
-			::GetProcAddress(g_framework, "AddSectionItem"));
+			::GetProcAddress(framework, "AddSectionItem"));
 		const auto getVersion = reinterpret_cast<GetVersionFunction>(
-			::GetProcAddress(g_framework, "GetMenuFrameworkVersion"));
-		g_text = reinterpret_cast<TextFunction>(::GetProcAddress(g_framework, "igTextUnformatted"));
-		if (!addSectionItem || !getVersion || !g_text) {
+			::GetProcAddress(framework, "GetMenuFrameworkVersion"));
+		const auto text = reinterpret_cast<TextFunction>(
+			::GetProcAddress(framework, "igTextUnformatted"));
+		if (!addSectionItem || !getVersion || !text) {
 			logger::warn("SKSE Menu Framework is missing required API exports; monitor page skipped");
 			return false;
 		}
@@ -88,6 +97,7 @@ namespace menu
 			return false;
 		}
 
+		GetState().text.store(text, std::memory_order_release);
 		addSectionItem("SkyrimFPSMemoryCore/Monitor", RenderMonitorPage);
 		logger::info("Registered SkyrimFPSMemoryCore monitor page with SKSE Menu Framework {:.2f}", version);
 		return true;
