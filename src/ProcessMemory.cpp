@@ -11,9 +11,9 @@ namespace memory
 		counters.cb = sizeof(counters);
 
 		if (!::GetProcessMemoryInfo(
-				::GetCurrentProcess(),
-				reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters),
-				sizeof(counters))) {
+			::GetCurrentProcess(),
+			reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters),
+			sizeof(counters))) {
 			return false;
 		}
 
