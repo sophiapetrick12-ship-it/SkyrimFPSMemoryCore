@@ -30,13 +30,25 @@ namespace config
 		g_settings.enableMemoryTelemetry = ReadBoolean(path, L"EnableMemoryTelemetry", true);
 		g_settings.enableMenuFrameworkPage = ReadBoolean(path, L"EnableMenuFrameworkPage", true);
 
-		if (!std::filesystem::exists(path)) {
-			std::error_code error;
+		std::error_code error;
+		const bool exists = std::filesystem::exists(path, error);
+		if (error) {
+			logger::warn("Could not inspect the plugin configuration file; using defaults for missing values");
+		} else if (!exists) {
 			std::filesystem::create_directories(path.parent_path(), error);
-			::WritePrivateProfileStringW(L"Features", L"EnableFrameMonitor", L"0", path.c_str());
-			::WritePrivateProfileStringW(L"Features", L"EnableMemoryTelemetry", L"1", path.c_str());
-			::WritePrivateProfileStringW(L"Features", L"EnableMenuFrameworkPage", L"1", path.c_str());
-			logger::info("Created default configuration at {}", path.string());
+			if (error) {
+				logger::error("Could not create the plugin configuration directory: {}", error.message());
+			} else {
+				const bool wroteDefaults =
+					::WritePrivateProfileStringW(L"Features", L"EnableFrameMonitor", L"0", path.c_str()) &&
+					::WritePrivateProfileStringW(L"Features", L"EnableMemoryTelemetry", L"1", path.c_str()) &&
+					::WritePrivateProfileStringW(L"Features", L"EnableMenuFrameworkPage", L"1", path.c_str());
+				if (wroteDefaults) {
+					logger::info("Created default plugin configuration");
+				} else {
+					logger::warn("Could not write the default plugin configuration file");
+				}
+			}
 		}
 
 		logger::info(
