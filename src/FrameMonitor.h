@@ -12,6 +12,6 @@ namespace monitor
 		bool          available{ false };
 	};
 
-	[[nodiscard]] bool          InstallMainLoopHook();
+	[[nodiscard]] bool          InstallPresentHook();
 	[[nodiscard]] FrameSnapshot GetFrameSnapshot() noexcept;
 }
