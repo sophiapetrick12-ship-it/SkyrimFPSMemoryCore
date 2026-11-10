@@ -25,16 +25,16 @@ namespace menu
 
 			const auto frame = monitor::GetFrameSnapshot();
 			if (frame.available) {
-				const auto fpsLine = std::format("Main-loop cadence: {:.1f} frames/s", frame.framesPerSecond);
-				const auto frameLine = std::format("Main-loop interval: {:.2f} ms", frame.frameTimeMilliseconds);
+				const auto fpsLine = std::format("DXGI Present rate: {:.1f} FPS", frame.framesPerSecond);
+				const auto frameLine = std::format("DXGI Present interval: {:.2f} ms", frame.frameTimeMilliseconds);
 				const auto countLine = std::format("Samples: {}", frame.frameCount);
 				text(fpsLine.c_str(), nullptr);
 				text(frameLine.c_str(), nullptr);
 				text(countLine.c_str(), nullptr);
 			} else {
-				text("Frame-time monitor disabled until its engine hook is verified.", nullptr);
+				text("DXGI Present monitor unavailable; waiting for valid swap-chain samples.", nullptr);
 			}
-			text("No display FPS or frame-time data is currently collected.", nullptr);
+			text("Measures Skyrim swap-chain Present cadence, not physical display scan-out.", nullptr);
 
 			memory::ProcessMemorySnapshot process{};
 			memory::SystemMemorySnapshot  system{};
