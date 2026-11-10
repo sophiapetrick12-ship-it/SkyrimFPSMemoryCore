@@ -1,7 +1,7 @@
+#include <psapi.h>
+
 #include "PCH.h"
 #include "ProcessMemory.h"
-
-#include <psapi.h>
 
 namespace memory
 {
