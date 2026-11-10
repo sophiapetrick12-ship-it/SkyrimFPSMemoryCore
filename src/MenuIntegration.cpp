@@ -41,15 +41,21 @@ namespace menu
 			if (memory::GetLatestTelemetry(process, system)) {
 				constexpr double mib = 1024.0 * 1024.0;
 				const auto       processLine = std::format(
-					"Process RAM: working set {:.0f} MiB | private {:.0f} MiB",
+					"Process: working set {:.0f} MiB | private {:.0f} MiB | commit {:.0f} MiB",
 					static_cast<double>(process.workingSetBytes) / mib,
-					static_cast<double>(process.privateUsageBytes) / mib);
+					static_cast<double>(process.privateUsageBytes) / mib,
+					static_cast<double>(process.commitChargeBytes) / mib);
 				const auto systemLine = std::format(
 					"System RAM: {}% used | {:.0f} MiB available",
 					system.memoryLoadPercent,
 					static_cast<double>(system.availablePhysicalBytes) / mib);
+				const auto commitLine = std::format(
+					"System commit: {:.0f} MiB available / {:.0f} MiB limit",
+					static_cast<double>(system.availableCommitBytes) / mib,
+					static_cast<double>(system.commitLimitBytes) / mib);
 				text(processLine.c_str(), nullptr);
 				text(systemLine.c_str(), nullptr);
+				text(commitLine.c_str(), nullptr);
 			} else {
 				text("Memory telemetry: waiting for samples", nullptr);
 			}
