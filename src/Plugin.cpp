@@ -37,16 +37,46 @@ namespace
 	void OnDataLoaded()
 	{
 		logger::info("OnDataLoaded: initializing optional modules");
-		const auto settings = config::LoadSettings();
+
+		config::Settings settings{};
+		try {
+			settings = config::LoadSettings();
+		} catch (const std::exception& error) {
+			logger::error("Failed to load configuration; continuing with safe defaults: {}", error.what());
+		} catch (...) {
+			logger::error("Failed to load configuration; continuing with safe defaults");
+		}
 
 		if (settings.enableMemoryTelemetry) {
-			memory::StartTelemetryWorker();
+			try {
+				memory::StartTelemetryWorker();
+			} catch (const std::exception& error) {
+				logger::error("Memory telemetry could not start: {}", error.what());
+			} catch (...) {
+				logger::error("Memory telemetry could not start");
+			}
 		}
+
 		if (settings.enableFrameMonitor) {
-			monitor::InstallMainLoopHook();
+			try {
+				if (!monitor::InstallMainLoopHook()) {
+					logger::warn("Frame monitoring remains unavailable; no unverified hook was installed");
+				}
+			} catch (const std::exception& error) {
+				logger::error("Frame monitor initialization failed safely: {}", error.what());
+			} catch (...) {
+				logger::error("Frame monitor initialization failed safely");
+			}
 		}
+
 		if (settings.enableMenuFrameworkPage) {
-			menu::RegisterMenuPage();
+			try {
+				menu::RegisterMenuPage();
+			} catch (const std::exception& error) {
+				logger::error("Menu page registration failed: {}", error.what());
+			} catch (...) {
+				logger::error("Menu page registration failed");
+			}
 		}
 	}
 
