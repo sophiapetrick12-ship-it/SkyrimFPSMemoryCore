@@ -13,7 +13,7 @@
 
 - **Core:** SKSE lifecycle, runtime detection, logging, and initialization.
 - **Memory:** read-only process working set, peak working set, private usage, pagefile usage, system physical memory, pagefile availability, and memory-load telemetry. A one-second worker samples memory outside any game hook. This is telemetry only; it does not free RAM or claim to improve performance.
-- **Monitor:** currently a safe disabled stub. The previously proposed call-site IDs and offsets were not verified against the exact game executable and function signature, so the hook was removed. The feature defaults to off and reports why it is unavailable. No FPS values are fabricated.
+- **Monitor:** currently a safe disabled stub. The previously proposed `Main::Update` call-site IDs/offsets were not verified and were removed. Upstream CommonLibSSE-NG exposes `RE::Main::RenderWorld(bool)` with relocation IDs 100424 (SE) and 107142 (AE); this is only a candidate render callback, not proof of one call per presented frame. Its call frequency and entry/call-site instructions still need executable-level validation, so it is not hooked. The feature defaults to off and reports why it is unavailable. No FPS values are fabricated.
 - **UI:** optional SKSE Menu Framework page registered through the documented AddSectionItem callback API and ImGui text export. It remains optional if the framework is absent. Runtime testing is still required.
 - **Config:** INI at Data/SKSE/Plugins/SkyrimFPSMemoryCore.ini. Memory telemetry and the optional menu page default on; the unverified frame monitor defaults off.
 
@@ -42,7 +42,7 @@ Each optional feature can be disabled independently. No launcher or manual activ
 
 ## Remaining work before release
 
-- Identify a reliable game-loop or present-frame source and verify its function signature and call site in the Skyrim SE 1.5.97 executable before implementing frame timing.
+- Validate the upstream `RE::Main::RenderWorld(bool)` candidate against the exact pinned CommonLib submodule and the Skyrim SE 1.5.97 executable: confirm the function prologue/call-site, caller, call frequency, and whether it runs once per rendered world frame. If it does not provide a reliable frame metric, use a properly captured DXGI Present source instead. Do not label render-callback cadence as display FPS.
 - Validate the SKSE Menu Framework page against the installed 3.x framework release.
 - Build the plugin on Windows with the pinned CommonLibSSE-NG dependency and resolve all compiler/linker failures.
 - Confirm AE runtime coverage against supported Address Library versions; unsupported versions remain disabled.
