@@ -13,7 +13,7 @@
 
 - **Core:** SKSE lifecycle, runtime detection, logging, and initialization.
 - **Memory:** read-only process working set, peak working set, private usage, process commit charge, system physical memory, system commit-limit/available-commit counters, and memory-load telemetry. A one-second worker samples memory outside any game hook. This is telemetry only; it does not free RAM or claim to improve performance.
-- **Monitor:** currently a safe disabled stub. The previously proposed `Main::Update` call-site IDs/offsets were not verified and were removed. Upstream CommonLibSSE-NG exposes `RE::Main::RenderWorld(bool)` with relocation IDs 100424 (SE) and 107142 (AE); this is only a candidate render callback, not proof of one call per presented frame. Its call frequency and entry/call-site instructions still need executable-level validation, so it is not hooked. The feature defaults to off and reports why it is unavailable. No FPS values are fabricated.
+- **Monitor:** uses the primary game's DXGI `IDXGISwapChain::Present` callback. It shadows the swap-chain object's 18-entry `IDXGISwapChain` vtable and replaces only slot 8 on that object; it does not patch Skyrim executable code or use guessed Address Library offsets. The callback reads a steady-clock timestamp, updates atomic interval/count counters, and forwards to the original Present function. The metric is DXGI Present-call cadence, not physical display scan-out FPS. The feature defaults on; if the renderer, swap chain, or writable object vptr is unavailable, installation fails closed and the menu reports that no samples are available. In-game and overlay compatibility testing is still required.
 - **UI:** optional SKSE Menu Framework page registered through the documented AddSectionItem callback API and ImGui text export. It remains optional if the framework is absent. Runtime testing is still required.
 - **Config:** INI at Data/SKSE/Plugins/SkyrimFPSMemoryCore.ini. Memory telemetry and the optional menu page default on; the unverified frame monitor defaults off.
 
@@ -22,7 +22,7 @@
 The INI file contains these settings:
 
     [Features]
-    EnableFrameMonitor=0
+    EnableFrameMonitor=1
     EnableMemoryTelemetry=1
     EnableMenuFrameworkPage=1
 
@@ -33,7 +33,7 @@ Each optional feature can be disabled independently. No launcher or manual activ
 1. No guessed engine offsets, blind patches, or unvalidated hooks.
 2. No reductions to texture resolution, shadows, draw distance, LOD, vegetation, object counts, or other visual quality.
 3. Monitoring code does not write to actors or gameplay state.
-4. No frame hook is installed until its target function, call-site, instruction, and calling convention are verified for that exact runtime.
+4. The Present callback runs on the render thread and must not read game state, allocate, lock, or log. It only records a timestamp and atomic counters before forwarding to the original Present function.
 5. Memory queries run on a low-frequency worker; they do not run inside a game update hook.
 6. File I/O and formatting are kept out of any future frame hook.
 7. No periodic EmptyWorkingSet or arbitrary working-set trimming.
@@ -42,7 +42,7 @@ Each optional feature can be disabled independently. No launcher or manual activ
 
 ## Remaining work before release
 
-- Validate the upstream `RE::Main::RenderWorld(bool)` candidate against the exact pinned CommonLib submodule and the Skyrim SE 1.5.97 executable: confirm the function prologue/call-site, caller, call frequency, and whether it runs once per rendered world frame. If it does not provide a reliable frame metric, use a properly captured DXGI Present source instead. Do not label render-callback cadence as display FPS.
+- Validate `RE::BSGraphics::Renderer::GetRuntimeData().renderWindows[0].swapChain` against the exact pinned CommonLib submodule and the Skyrim SE 1.5.97 runtime. Confirm that the swap-chain object remains valid, test device-reset/swap-chain recreation behavior, and test coexistence with ReShade/ENB/other DXGI hooks. Keep the metric labelled as Present-call cadence, not physical display FPS.
 - Validate the SKSE Menu Framework page against the installed 3.x framework release.
 - Build the plugin on Windows with the pinned CommonLibSSE-NG dependency and resolve all compiler/linker failures.
 - Confirm AE runtime coverage against supported Address Library versions; unsupported versions remain disabled.
