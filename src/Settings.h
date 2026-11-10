@@ -4,7 +4,7 @@ namespace config
 {
 	struct Settings
 	{
-		bool enableFrameMonitor{ true };
+		bool enableFrameMonitor{ false };
 		bool enableMemoryTelemetry{ true };
 		bool enableMenuFrameworkPage{ true };
 	};
