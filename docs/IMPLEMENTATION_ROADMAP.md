@@ -4,53 +4,48 @@
 
 - One CommonLibSSE-NG plugin build with runtime-specific code paths.
 - Primary validation target: Skyrim SE 1.5.97.
-- Additional targets: Skyrim SE/AE runtimes supported by the pinned CommonLibSSE-NG and their matching Address Library entries.
-- Skyrim VR is a separate compatibility target; do not claim it is supported until its hook and UI paths are independently validated.
-- Detect the exact runtime at startup. Unknown or unvalidated runtimes must load safely with unsupported features disabled.
-- Never require the user to downgrade, replace, or modify their Skyrim installation.
+- Additional SE/AE runtimes are enabled only after their relocation and hook call-site are independently validated.
+- Skyrim VR remains a separate target and is not currently supported.
+- Unknown or unvalidated runtimes load safely with unsupported features disabled.
+- The plugin never requires downgrading, replacing, or modifying the user's Skyrim installation.
 
-## Modules
+## Implemented modules
 
-- **Core** — SKSE lifecycle, runtime detection, logging and safe initialization.
-- **Memory** — process telemetry first. No periodic EmptyWorkingSet or arbitrary working-set trimming. Memory optimization must be based on measured allocations/cache behavior and must not evict assets or lower visual quality.
-- **Monitor** — actual Skyrim main-loop timing and process memory. Do not substitute ImGui/menu FPS for game FPS.
-- **UI** — optional SKSE Menu Framework page, registered automatically when its supported API is present. The plugin must still load if the framework is absent.
-- **Config** — persisted settings with conservative defaults and explicit per-feature enable/disable.
+- **Core:** SKSE lifecycle, runtime detection, logging, and safe initialization.
+- **Memory:** read-only process working set, peak working set, private usage, pagefile usage, system physical memory, pagefile availability, and memory-load telemetry. A one-second worker samples memory outside the game update hook.
+- **Monitor:** RE::Main::Update call-site timing for Skyrim SE 1.5.97 only. The call instruction and its destination are checked before the trampoline is installed. The metric is explicitly labelled main-loop cadence, not GPU-present/display FPS.
+- **UI:** optional SKSE Menu Framework page registered automatically at kDataLoaded, using runtime export lookup. The plugin remains usable if the framework is absent or its required API exports are unavailable.
+- **Config:** persistent INI settings at Data/SKSE/Plugins/SkyrimFPSMemoryCore.ini, created with conservative enabled defaults.
+
+## Configuration
+
+The INI file contains these settings:
+
+    [Features]
+    EnableFrameMonitor=1
+    EnableMemoryTelemetry=1
+    EnableMenuFrameworkPage=1
+
+Each optional feature can be disabled independently. No launcher or manual activation is required.
 
 ## Safety and performance rules
 
 1. No guessed engine offsets, blind patches, or unvalidated hooks.
 2. No reductions to texture resolution, shadows, draw distance, LOD, vegetation, object counts, or other visual quality.
-3. Monitoring code performs no writes to actors or engine gameplay state.
-4. Each runtime-specific hook is gated by exact runtime detection and validated relocation/call-site resolution. Failure disables that feature, not the whole plugin.
-5. Sampling on the game thread must be constant-time and allocation-free where practical. File I/O and formatting stay off the game thread.
-6. Do not claim FPS or RAM improvement until a repeatable before/after test demonstrates it on the target runtime.
-7. Do not ship a DLL until CI builds it and the target runtime is validated in-game.
+3. Monitoring code does not write to actors or gameplay state.
+4. The frame hook is currently enabled only for the exact Skyrim SE 1.5.97 runtime. All other runtimes fail closed for frame sampling.
+5. The hook verifies the call-site lies in executable code, checks for a CALL rel32 instruction, and verifies its destination is in the executable code segment before patching.
+6. Memory queries run on a low-frequency worker; the game update hook performs only timestamp and atomic-counter work.
+7. File I/O and formatting are kept out of the game update hook.
+8. No periodic EmptyWorkingSet or arbitrary working-set trimming.
+9. Do not claim FPS or RAM improvement until a repeatable before/after test demonstrates it on the target runtime.
+10. Do not ship a DLL until CI builds it and the target runtime is validated in-game.
 
-## Current implementation
+## Remaining work before release
 
-The first memory component captures the current process working set, peak working set, private usage and pagefile usage through the Windows process API. This is read-only telemetry; it does not yet optimize or clean RAM.
-
-## Frame timing design (research complete; implementation pending)
-
-- A public Skyrim performance-monitor project demonstrates a `RE::Main::Update` hook and monotonic-clock measurement, while separately recording `RE::BSTimer::delta` and `realTimeDelta`.
-- The resulting metric is Skyrim main-loop cadence, not guaranteed GPU-present/display FPS. The UI and logs must label it accurately.
-- Do not copy another plugin's fixed relocation IDs/offsets without independently validating each supported runtime and call-site signature.
-- Resolve the hook through CommonLibSSE-NG/Address Library for each exact runtime. If a relocation is absent, ambiguous, or fails validation, disable FPS sampling for that runtime.
-- SE 1.5.97 must be explicitly resolved and tested before the hook is enabled there. AE runtime support is added per validated runtime, not by assuming all AE versions share one address.
-- Keep sampling lightweight; buffer data in memory and move disk writes to a worker thread.
-
-## SKSE Menu Framework integration (official API checked; implementation pending)
-
-- The official QTR-Modding API header exposes `IsInstalled`, `SetSection`, `AddSectionItem`, and `GetMenuFrameworkVersion`; page registration uses the exported `AddSectionItem` function.
-- The current Nexus listing reports framework 3.18. Use the official API header/exports rather than a guessed older header or invented API version.
-- Detect the loaded framework module and verify required exports/version before registering. Do not make the framework a hard dependency.
-- Register the plugin section/page at a safe SKSE lifecycle stage after the framework is loaded.
-- Keep rendering limited to the framework's supported UI callback; never use menu framerate as game FPS.
-
-## Actual optimization work still required
-
+- Validate the frame hook in-game on Skyrim SE 1.5.97 and confirm its frame-time values against an external frame-time capture.
+- Validate the SKSE Menu Framework page on the current 3.x framework release.
+- Add AE runtime hook variants only after independent per-runtime call-site validation.
 - Profile frame-time spikes and memory behavior on a repeatable test route/save before choosing optimizations.
-- Prefer low-risk, measurable reductions in redundant plugin-owned work and avoid changing vanilla rendering quality or gameplay state.
-- Treat process memory counters as diagnostic measurements, not proof of memory optimization.
-- Each optimization needs an enable/disable setting, runtime guard, logging, and a before/after benchmark.
+- Implement only low-risk, measurable reductions in redundant plugin-owned work. Each optimization needs an enable/disable setting, runtime guard, logging, and a before/after benchmark.
+- Keep Skyrim VR disabled until independently validated.

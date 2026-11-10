@@ -21,10 +21,12 @@ namespace memory
 		std::uint32_t memoryLoadPercent{ 0 };
 	};
 
-	// Read-only process telemetry. This deliberately does not trim or modify
-	// the game's working set.
 	[[nodiscard]] bool CaptureProcessMemory(ProcessMemorySnapshot& a_snapshot) noexcept;
-
-	// Read-only system-wide memory pressure counters from GlobalMemoryStatusEx.
 	[[nodiscard]] bool CaptureSystemMemory(SystemMemorySnapshot& a_snapshot) noexcept;
+
+	void StartTelemetryWorker();
+	void StopTelemetryWorker() noexcept;
+	[[nodiscard]] bool GetLatestTelemetry(
+		ProcessMemorySnapshot& a_process,
+		SystemMemorySnapshot& a_system) noexcept;
 }

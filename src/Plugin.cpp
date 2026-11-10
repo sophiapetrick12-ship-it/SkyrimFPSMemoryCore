@@ -1,69 +1,64 @@
 #include "PCH.h"
+#include "FrameMonitor.h"
+#include "MenuIntegration.h"
 #include "ProcessMemory.h"
+#include "Settings.h"
 
-void SetupLog()
+namespace
 {
-	auto logsFolder = logger::log_directory();
-	if (!logsFolder) {
-		util::report_and_fail("SKSE log_directory not provided, logs can't be written");
-	}
+	void SetupLog()
+	{
+		auto logsFolder = logger::log_directory();
+		if (!logsFolder) {
+			util::report_and_fail("SKSE log_directory not provided, logs can't be written");
+		}
 
-	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
-	const auto  logName = plugin ? std::string{ plugin->GetName() } + ".log" : "Plugin.log";
-	auto        logPath = *logsFolder / logName;
+		const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
+		const auto  logName = plugin ? std::string{ plugin->GetName() } + ".log" : "Plugin.log";
+		auto        logPath = *logsFolder / logName;
 
-	auto                          fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logPath.string(), true);
-	std::vector<spdlog::sink_ptr> sinks{ fileSink };
-	if (IsDebuggerPresent()) {
-		sinks.push_back(std::make_shared<spdlog::sinks::msvc_sink_mt>());
-	}
+		auto                          fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logPath.string(), true);
+		std::vector<spdlog::sink_ptr> sinks{ fileSink };
+		if (IsDebuggerPresent()) {
+			sinks.push_back(std::make_shared<spdlog::sinks::msvc_sink_mt>());
+		}
 
-	auto spdlogger = std::make_shared<spdlog::logger>("global", sinks.begin(), sinks.end());
-	spdlog::set_default_logger(std::move(spdlogger));
-	spdlog::set_pattern("[%H:%M:%S.%e] [%l] [%s:%#] %v");
+		auto spdlogger = std::make_shared<spdlog::logger>("global", sinks.begin(), sinks.end());
+		spdlog::set_default_logger(std::move(spdlogger));
+		spdlog::set_pattern("[%H:%M:%S.%e] [%l] [%s:%#] %v");
 #ifdef NDEBUG
-	spdlog::set_level(spdlog::level::info);
+		spdlog::set_level(spdlog::level::info);
 #else
-	spdlog::set_level(spdlog::level::trace);
+		spdlog::set_level(spdlog::level::trace);
 #endif
-	spdlog::flush_on(spdlog::level::info);
-}
-
-void OnDataLoaded()
-{
-	logger::info("OnDataLoaded hook fired");
-	constexpr double bytesPerMiB = 1024.0 * 1024.0;
-
-	memory::ProcessMemorySnapshot processMemory{};
-	if (memory::CaptureProcessMemory(processMemory)) {
-		logger::info(
-			"Process memory: working set {:.1f} MiB, peak {:.1f} MiB, private {:.1f} MiB, pagefile {:.1f} MiB",
-			static_cast<double>(processMemory.workingSetBytes) / bytesPerMiB,
-			static_cast<double>(processMemory.peakWorkingSetBytes) / bytesPerMiB,
-			static_cast<double>(processMemory.privateUsageBytes) / bytesPerMiB,
-			static_cast<double>(processMemory.pagefileUsageBytes) / bytesPerMiB);
-	} else {
-		logger::warn("Unable to query process memory counters");
+		spdlog::flush_on(spdlog::level::info);
 	}
 
-	memory::SystemMemorySnapshot systemMemory{};
-	if (memory::CaptureSystemMemory(systemMemory)) {
-		logger::info(
-			"System memory: load {}%, physical available {:.1f}/{:.1f} MiB, pagefile available {:.1f}/{:.1f} MiB",
-			systemMemory.memoryLoadPercent,
-			static_cast<double>(systemMemory.availablePhysicalBytes) / bytesPerMiB,
-			static_cast<double>(systemMemory.totalPhysicalBytes) / bytesPerMiB,
-			static_cast<double>(systemMemory.availablePageFileBytes) / bytesPerMiB,
-			static_cast<double>(systemMemory.totalPageFileBytes) / bytesPerMiB);
-	} else {
-		logger::warn("Unable to query system memory counters");
+	void OnDataLoaded()
+	{
+		logger::info("OnDataLoaded: initializing optional modules");
+		const auto settings = config::LoadSettings();
+
+		if (settings.enableMemoryTelemetry) {
+			memory::StartTelemetryWorker();
+		}
+		if (settings.enableFrameMonitor) {
+			monitor::InstallMainLoopHook();
+		}
+		if (settings.enableMenuFrameworkPage) {
+			menu::RegisterMenuPage();
+		}
 	}
 
-	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
-	const auto  name = plugin ? plugin->GetName() : "Plugin";
+	void OnSKSEMessage(SKSE::MessagingInterface::Message* a_message)
+	{
+		if (!a_message) {
+			return;
+		}
 
-	if (auto* const console = RE::ConsoleLog::GetSingleton()) {
-		console->Print("[%s] Loaded successfully!", std::string(name).c_str());
+		if (a_message->type == SKSE::MessagingInterface::kDataLoaded) {
+			OnDataLoaded();
+		}
 	}
 }
 
@@ -79,21 +74,16 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	}
 	logger::info("{} v{} loaded", plugin->GetName(), plugin->GetVersion());
 
+	const auto runtime = REL::Module::get().version();
+	logger::info("Detected Skyrim runtime {}.{}.{}.{}", runtime[0], runtime[1], runtime[2], runtime[3]);
+
 	const auto* messaging = SKSE::GetMessagingInterface();
 	if (!messaging) {
 		logger::error("Failed to get SKSE messaging interface");
 		return false;
 	}
 
-	if (!messaging->RegisterListener([](SKSE::MessagingInterface::Message* a_msg) {
-			switch (a_msg->type) {
-			case SKSE::MessagingInterface::kDataLoaded:
-				OnDataLoaded();
-				break;
-			default:
-				break;
-			}
-		})) {
+	if (!messaging->RegisterListener(OnSKSEMessage)) {
 		logger::error("Failed to register messaging listener");
 		return false;
 	}
