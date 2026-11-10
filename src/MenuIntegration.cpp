@@ -32,7 +32,7 @@ namespace menu
 				text(frameLine.c_str(), nullptr);
 				text(countLine.c_str(), nullptr);
 			} else {
-				text("DXGI Present monitor unavailable; waiting for valid swap-chain samples.", nullptr);
+				text("No Present samples available (monitor disabled or swap chain unavailable).", nullptr);
 			}
 			text("Measures Skyrim swap-chain Present cadence, not physical display scan-out.", nullptr);
 
