@@ -80,15 +80,8 @@ namespace monitor
 			return false;
 		}
 
-		auto** originalVtable = *reinterpret_cast<void***>(swapChain);
-		if (!originalVtable) {
-			logger::error("DXGI Present monitor skipped: swap-chain vtable is null");
-			return false;
-		}
-		auto& objectVptr = *reinterpret_cast<void**>(swapChain);
-
 		MEMORY_BASIC_INFORMATION memoryInfo{};
-		if (::VirtualQuery(&objectVptr, &memoryInfo, sizeof(memoryInfo)) != sizeof(memoryInfo) ||
+		if (::VirtualQuery(swapChain, &memoryInfo, sizeof(memoryInfo)) != sizeof(memoryInfo) ||
 			memoryInfo.State != MEM_COMMIT) {
 			logger::error("DXGI Present monitor skipped: could not validate swap-chain object memory");
 			return false;
@@ -103,6 +96,13 @@ namespace monitor
 			logger::error("DXGI Present monitor skipped: swap-chain vptr memory is not writable");
 			return false;
 		}
+
+		auto** originalVtable = *reinterpret_cast<void***>(swapChain);
+		if (!originalVtable) {
+			logger::error("DXGI Present monitor skipped: swap-chain vtable is null");
+			return false;
+		}
+		auto& objectVptr = *reinterpret_cast<void**>(swapChain);
 
 		if (!originalVtable[kPresentVtableIndex]) {
 			logger::error("DXGI Present monitor skipped: original Present function is null");
