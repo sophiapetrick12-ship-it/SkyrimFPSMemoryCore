@@ -1,4 +1,5 @@
 #include "PCH.h"
+#include "ProcessMemory.h"
 
 void SetupLog()
 {
@@ -31,6 +32,18 @@ void SetupLog()
 void OnDataLoaded()
 {
 	logger::info("OnDataLoaded hook fired");
+
+	memory::ProcessMemorySnapshot memorySnapshot{};
+	if (memory::CaptureProcessMemory(memorySnapshot)) {
+		constexpr double bytesPerMiB = 1024.0 * 1024.0;
+		logger::info(
+			"Process memory: working set {:.1f} MiB, peak {:.1f} MiB, private {:.1f} MiB",
+			static_cast<double>(memorySnapshot.workingSetBytes) / bytesPerMiB,
+			static_cast<double>(memorySnapshot.peakWorkingSetBytes) / bytesPerMiB,
+			static_cast<double>(memorySnapshot.privateUsageBytes) / bytesPerMiB);
+	} else {
+		logger::warn("Unable to query process memory counters");
+	}
 
 	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
 	const auto  name = plugin ? plugin->GetName() : "Plugin";
