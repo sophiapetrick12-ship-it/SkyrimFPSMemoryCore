@@ -91,10 +91,12 @@ namespace monitor
 
 		const auto runtime = REL::Module::get().version();
 		const bool supportedSE = REL::Module::IsSE() && runtime == REL::Version{ 1, 5, 97, 0 };
-		const bool supportedAE = REL::Module::IsAE();
-		if (!supportedSE && !supportedAE) {
+		// The hook currently has a validated runtime allowlist of SE 1.5.97 only.
+		// IsAE() covers multiple incompatible runtime generations and is not a
+		// sufficient compatibility check for patching a swap-chain vtable.
+		if (!supportedSE) {
 			logger::warn(
-				"DXGI Present monitor skipped on unsupported runtime {}.{}.{}.{}",
+				"DXGI Present monitor disabled: runtime {}.{}.{}.{} is not in the validated allowlist (SE 1.5.97.0 only)",
 				runtime[0], runtime[1], runtime[2], runtime[3]);
 			return false;
 		}
