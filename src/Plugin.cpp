@@ -1,55 +1,107 @@
+#include "FrameMonitor.h"
+#include "MenuIntegration.h"
 #include "PCH.h"
 #include "ProcessMemory.h"
+#include "Settings.h"
 
-void SetupLog()
+#include <exception>
+
+namespace
 {
-	auto logsFolder = logger::log_directory();
-	if (!logsFolder) {
-		util::report_and_fail("SKSE log_directory not provided, logs can't be written");
-	}
+	void SetupLog()
+	{
+		auto logsFolder = logger::log_directory();
+		if (!logsFolder) {
+			util::report_and_fail("SKSE log_directory not provided, logs can't be written");
+		}
 
-	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
-	const auto  logName = plugin ? std::string{ plugin->GetName() } + ".log" : "Plugin.log";
-	auto        logPath = *logsFolder / logName;
+		const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
+		const auto  logName = plugin ? std::string{ plugin->GetName() } + ".log" : "Plugin.log";
+		auto        logPath = *logsFolder / logName;
 
-	auto                          fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logPath.string(), true);
-	std::vector<spdlog::sink_ptr> sinks{ fileSink };
-	if (IsDebuggerPresent()) {
-		sinks.push_back(std::make_shared<spdlog::sinks::msvc_sink_mt>());
-	}
+		auto                          fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logPath.string(), true);
+		std::vector<spdlog::sink_ptr> sinks{ fileSink };
+		if (IsDebuggerPresent()) {
+			sinks.push_back(std::make_shared<spdlog::sinks::msvc_sink_mt>());
+		}
 
-	auto spdlogger = std::make_shared<spdlog::logger>("global", sinks.begin(), sinks.end());
-	spdlog::set_default_logger(std::move(spdlogger));
-	spdlog::set_pattern("[%H:%M:%S.%e] [%l] [%s:%#] %v");
+		auto spdlogger = std::make_shared<spdlog::logger>("global", sinks.begin(), sinks.end());
+		spdlog::set_default_logger(std::move(spdlogger));
+		spdlog::set_pattern("[%H:%M:%S.%e] [%l] [%s:%#] %v");
 #ifdef NDEBUG
-	spdlog::set_level(spdlog::level::info);
+		spdlog::set_level(spdlog::level::info);
 #else
-	spdlog::set_level(spdlog::level::trace);
+		spdlog::set_level(spdlog::level::trace);
 #endif
-	spdlog::flush_on(spdlog::level::info);
-}
-
-void OnDataLoaded()
-{
-	logger::info("OnDataLoaded hook fired");
-
-	memory::ProcessMemorySnapshot memorySnapshot{};
-	if (memory::CaptureProcessMemory(memorySnapshot)) {
-		constexpr double bytesPerMiB = 1024.0 * 1024.0;
-		logger::info(
-			"Process memory: working set {:.1f} MiB, peak {:.1f} MiB, private {:.1f} MiB",
-			static_cast<double>(memorySnapshot.workingSetBytes) / bytesPerMiB,
-			static_cast<double>(memorySnapshot.peakWorkingSetBytes) / bytesPerMiB,
-			static_cast<double>(memorySnapshot.privateUsageBytes) / bytesPerMiB);
-	} else {
-		logger::warn("Unable to query process memory counters");
+		spdlog::flush_on(spdlog::level::info);
 	}
 
-	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
-	const auto  name = plugin ? plugin->GetName() : "Plugin";
+	void TryInstallFrameMonitor()
+	{
+		if (!config::GetSettings().enableFrameMonitor) {
+			return;
+		}
 
-	if (auto* const console = RE::ConsoleLog::GetSingleton()) {
-		console->Print("[%s] Loaded successfully!", std::string(name).c_str());
+		try {
+			if (!monitor::InstallPresentHook()) {
+				logger::warn("Frame monitoring remains unavailable; the DXGI Present hook could not be installed");
+			}
+		} catch (const std::exception& error) {
+			logger::error("Frame monitor initialization failed safely: {}", error.what());
+		} catch (...) {
+			logger::error("Frame monitor initialization failed safely");
+		}
+	}
+
+	void OnDataLoaded()
+	{
+		logger::info("OnDataLoaded: initializing optional modules");
+
+		config::Settings settings{};
+		try {
+			settings = config::LoadSettings();
+		} catch (const std::exception& error) {
+			logger::error("Failed to load configuration; continuing with safe defaults: {}", error.what());
+		} catch (...) {
+			logger::error("Failed to load configuration; continuing with safe defaults");
+		}
+
+		if (settings.enableMemoryTelemetry) {
+			try {
+				memory::StartTelemetryWorker();
+			} catch (const std::exception& error) {
+				logger::error("Memory telemetry could not start: {}", error.what());
+			} catch (...) {
+				logger::error("Memory telemetry could not start");
+			}
+		}
+
+		if (settings.enableMenuFrameworkPage) {
+			try {
+				menu::RegisterMenuPage();
+			} catch (const std::exception& error) {
+				logger::error("Menu page registration failed: {}", error.what());
+			} catch (...) {
+				logger::error("Menu page registration failed");
+			}
+		}
+
+		TryInstallFrameMonitor();
+	}
+
+	void OnSKSEMessage(SKSE::MessagingInterface::Message* a_message)
+	{
+		if (!a_message) {
+			return;
+		}
+
+		if (a_message->type == SKSE::MessagingInterface::kDataLoaded) {
+			OnDataLoaded();
+		} else if (
+			a_message->type == SKSE::MessagingInterface::kNewGame ||
+			a_message->type == SKSE::MessagingInterface::kPostLoadGame) {
+			TryInstallFrameMonitor();
+		}
 	}
 }
 
@@ -65,21 +117,16 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	}
 	logger::info("{} v{} loaded", plugin->GetName(), plugin->GetVersion());
 
+	const auto runtime = REL::Module::get().version();
+	logger::info("Detected Skyrim runtime {}.{}.{}.{}", runtime[0], runtime[1], runtime[2], runtime[3]);
+
 	const auto* messaging = SKSE::GetMessagingInterface();
 	if (!messaging) {
 		logger::error("Failed to get SKSE messaging interface");
 		return false;
 	}
 
-	if (!messaging->RegisterListener([](SKSE::MessagingInterface::Message* a_msg) {
-			switch (a_msg->type) {
-			case SKSE::MessagingInterface::kDataLoaded:
-				OnDataLoaded();
-				break;
-			default:
-				break;
-			}
-		})) {
+	if (!messaging->RegisterListener(OnSKSEMessage)) {
 		logger::error("Failed to register messaging listener");
 		return false;
 	}

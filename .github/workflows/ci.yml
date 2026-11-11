@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [feature/frame-monitor-validation]
   workflow_dispatch:
 
 concurrency:
@@ -231,26 +233,26 @@ jobs:
           version: "21"
           directory: ${{ runner.temp }}/llvm
 
-      - name: Install Ninja
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Install Ninja and linker runtime dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libxml2
 
       - name: Restore xwin binary cache
         id: xwin-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cargo/bin/xwin
-          key: xwin-0.9.0
+          key: xwin-139c2cfee4dce89e6291a34502b5d404b88ac803
 
       - name: Install xwin
         if: steps.xwin-cache.outputs.cache-hit != 'true'
-        run: cargo install --locked --version 0.9.0 xwin
+        run: cargo install --locked --git https://github.com/Jake-Shadle/xwin --rev 139c2cfee4dce89e6291a34502b5d404b88ac803 xwin
 
       - name: Restore Windows SDK and CRT cache
         id: xwin-splat-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.xwin
-          key: xwin-splat-0.9.0
+          key: xwin-splat-139c2cfee4dce89e6291a34502b5d404b88ac803
 
       - name: Fetch the Windows SDK and CRT
         if: steps.xwin-splat-cache.outputs.cache-hit != 'true'

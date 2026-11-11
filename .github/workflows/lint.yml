@@ -53,6 +53,6 @@ jobs:
         with:
           files: "."
           vale_flags: "--glob=README.md --glob=docs/**/*.md"
-          reporter: github-pr-check
+          reporter: github-pr-review
           filter_mode: nofilter
           fail_on_error: true
