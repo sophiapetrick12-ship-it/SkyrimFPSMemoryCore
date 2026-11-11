@@ -1,9 +1,8 @@
 # SkyrimFPSMemoryCore
 
-A starter template for Skyrim Special Edition / Anniversary Edition SKSE plugins using
-[CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG), [CMake](https://cmake.org), and [vcpkg](https://vcpkg.io).
+A draft SKSE plugin targeting Skyrim SE 1.5.97 and, after validation, AE runtimes. The current branch provides read-only process/system memory telemetry, an optional SKSE Menu Framework page, and a DXGI Present-call cadence monitor. The monitor still needs in-game/overlay validation; no measured gameplay performance optimization is implemented yet.
 
-Supports building on **Linux** (cross-compilation via `clang-cl` + [xwin](https://github.com/Jake-Shadle/xwin)) and **Windows** (MSVC).
+The project uses [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG), [CMake](https://cmake.org), and [vcpkg](https://vcpkg.io), with build configurations for **Windows** (MSVC) and **Linux cross-compilation** (`clang-cl` + [xwin](https://github.com/Jake-Shadle/xwin)).
 
 ---
 
@@ -12,38 +11,34 @@ Supports building on **Linux** (cross-compilation via `clang-cl` + [xwin](https:
 ## Requirements
 
 - [SKSE64](https://skse.silverlock.org/)
-- [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) for SE and AE, or [VR Address Library for SKSEVR](https://www.nexusmods.com/skyrimspecialedition/mods/58101) for VR
+- [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) for Skyrim SE/AE. The DXGI monitor obtains the renderer singleton through CommonLib's runtime relocation.
 
 ## Installation
 
-**Mod manager (recommended):**
-
-1. Install the requirements above.
-2. Install SkyrimFPSMemoryCore via your mod manager.
-3. Launch Skyrim via SKSE.
-
-**Manual:**
-
-1. Install the requirements above.
-2. Copy `SkyrimFPSMemoryCore.dll` to `Data\SKSE\Plugins\`.
-3. Launch Skyrim via SKSE.
+**Development build only — not a release.** Do not install this branch into your live Skyrim profile yet. The Windows build and in-game runtime validation are still pending. When a tested release is available, installation instructions will be published here.
 
 ## Compatibility
 
-- Compatible with Skyrim SE, AE, and VR.
-- No ESP/ESL required.
+- Primary validation target: Skyrim SE 1.5.97.
+- AE 1.6/1.7 compatibility is not yet verified.
+- Skyrim VR is not currently supported or validated.
+- No ESP/ESL is required.
 
 <!-- nexus:end -->
 
 ---
 
-## What the Starter Plugin Does
+## Current implementation status
 
-When loaded by Skyrim the plugin:
+When loaded by SKSE, the current development branch:
 
-1. **Writes a log** to `Data/SKSE/Plugins/SkyrimFPSMemoryCore.log` via spdlog.
-2. **Hooks `kDataLoaded`** (fires once all game data is loaded).
-3. **Prints to the in-game console** (`~` key): `[SkyrimFPSMemoryCore] Loaded successfully!`
+1. Writes `SkyrimFPSMemoryCore.log` through the SKSE logging interface.
+2. Reads `Data/SKSE/Plugins/SkyrimFPSMemoryCore.ini` after `kDataLoaded`.
+3. Optionally samples process and system memory counters once per second. This is read-only telemetry; it does not free RAM or claim to improve FPS.
+4. Optionally registers a page in SKSE Menu Framework when its documented API is available.
+5. Installs a low-overhead DXGI Present-call cadence monitor on the primary swap chain after `kDataLoaded`. It records the interval between Present calls and forwards to the original function. This is not physical display scan-out FPS, and runtime/overlay compatibility validation is still pending.
+
+The plugin does not change graphics settings, textures, actors, or gameplay state. The Present callback does not read game state. It is not ready for installation or performance claims until the Windows build and in-game validation pass.
 
 ---
 
