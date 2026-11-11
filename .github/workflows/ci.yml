@@ -233,8 +233,8 @@ jobs:
           version: "21"
           directory: ${{ runner.temp }}/llvm
 
-      - name: Install Ninja
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Install Ninja and linker runtime dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libxml2
 
       - name: Restore xwin binary cache
         id: xwin-cache
